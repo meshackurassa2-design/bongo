@@ -42,10 +42,12 @@ export const generateMusic = async (prompt: string, tags: string, title: string)
   }
 
   const json = await response.json();
-  if (!json.taskId && !json.data?.taskId) {
+  const taskId = json.data?.taskId || json.taskId;
+  
+  if (!taskId) {
      throw new Error("No taskId returned from Suno API");
   }
-  return json.taskId || json.data?.taskId;
+  return taskId;
 };
 
 export const getTaskInfo = async (taskId: string): Promise<SunoTaskResponse> => {
