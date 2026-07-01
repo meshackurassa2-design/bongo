@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import Slider from '@react-native-community/slider';
 import { usePlayerStore } from '../store/playerStore';
 import { useOfflineStore } from '../store/offlineStore';
+import { usePlaybackState, useProgress, State } from 'react-native-track-player';
 import { COLORS } from '../constants';
 
 const { width } = Dimensions.get('window');
@@ -15,9 +16,6 @@ export default function PlayerScreen() {
   const router = useRouter();
   const {
     currentTrack,
-    isPlaying,
-    positionMs,
-    durationMs,
     isShuffled,
     repeatOne,
     togglePlayPause,
@@ -29,6 +27,10 @@ export default function PlayerScreen() {
   } = usePlayerStore();
 
   const { downloadTrack, isDownloaded, isDownloading, downloadProgress } = useOfflineStore();
+  const playbackState = usePlaybackState();
+  const { position, duration } = useProgress(500);
+  const isPlaying = playbackState.state === State.Playing;
+  const isLoading = playbackState.state === State.Buffering || playbackState.state === State.Loading;
 
   if (!currentTrack) {
     return (
@@ -40,11 +42,10 @@ export default function PlayerScreen() {
     );
   }
 
-  const formatTime = (ms: number) => {
-    const totalSeconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   return (
@@ -101,16 +102,16 @@ export default function PlayerScreen() {
         <Slider
           style={styles.slider}
           minimumValue={0}
-          maximumValue={durationMs || 1}
-          value={positionMs}
-          onSlidingComplete={seekTo}
+          maximumValue={duration || 1}
+          value={position}
+          onSlidingComplete={(val) => seekTo(val * 1000)} // TrackPlayer uses seconds! Wait, seekTo takes ms in our store? No, our store seekTo divides by 1000. Let's pass ms.
           minimumTrackTintColor={COLORS.gold}
           maximumTrackTintColor={COLORS.divider}
           thumbTintColor={COLORS.gold}
         />
         <View style={styles.timeRow}>
-          <Text style={styles.timeText}>{formatTime(positionMs)}</Text>
-          <Text style={styles.timeText}>{formatTime(durationMs)}</Text>
+          <Text style={styles.timeText}>{formatTime(position)}</Text>
+          <Text style={styles.timeText}>{formatTime(duration)}</Text>
         </View>
       </View>
 
@@ -125,7 +126,11 @@ export default function PlayerScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.playBtn} onPress={togglePlayPause}>
-          <Ionicons name={isPlaying ? 'pause' : 'play'} size={36} color={COLORS.black} style={{ marginLeft: isPlaying ? 0 : 4 }} />
+          {isLoading ? (
+             <ActivityIndicator color={COLORS.black} size="large" />
+          ) : (
+             <Ionicons name={isPlaying ? 'pause' : 'play'} size={36} color={COLORS.black} style={{ marginLeft: isPlaying ? 0 : 4 }} />
+          )}
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.ctrlBtn} onPress={skipNext}>
@@ -148,6 +153,7 @@ const styles = StyleSheet.create({
   coverWrap: { alignItems: 'center', marginBottom: 40 },
   cover: { width: width - 64, height: width - 64, borderRadius: 20, backgroundColor: COLORS.cardAlt, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.5, shadowRadius: 20 },
   coverFallback: { justifyContent: 'center', alignItems: 'center' },
+  closeBtn: { marginTop: 50, marginLeft: 20 },
   infoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 32, marginBottom: 30 },
   infoWrap: { flex: 1, paddingRight: 16 },
   title: { color: COLORS.textPrimary, fontSize: 24, fontWeight: '800', marginBottom: 4 },

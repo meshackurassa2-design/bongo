@@ -1,19 +1,35 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { usePlayerStore } from '../store/playerStore';
+import { usePlaybackState, useProgress, State } from 'react-native-track-player';
+import { supabase } from '../lib/supabase';
 import { COLORS } from '../constants';
 
 import { useRouter } from 'expo-router';
 
 export default function MiniPlayer() {
   const router = useRouter();
-  const { currentTrack, isPlaying, positionMs, durationMs, togglePlayPause, skipNext, skipPrev } = usePlayerStore();
+  const { currentTrack, hasCountedPlay, markPlayCounted, togglePlayPause, skipNext, skipPrev } = usePlayerStore();
+  
+  const playbackState = usePlaybackState();
+  const { position, duration } = useProgress(500);
+  const isPlaying = playbackState.state === State.Playing;
+
+  // 30-second play counter for monetization
+  useEffect(() => {
+    if (currentTrack && !hasCountedPlay && position >= 30) {
+      markPlayCounted();
+      supabase.rpc('increment_play_count', { track_id: currentTrack.id }).then(({ error }) => {
+        if (error) console.error("Failed to increment play count:", error);
+      });
+    }
+  }, [position, currentTrack, hasCountedPlay]);
 
   if (!currentTrack) return null;
 
-  const progress = durationMs > 0 ? positionMs / durationMs : 0;
+  const progress = duration > 0 ? position / duration : 0;
 
   return (
     <View style={styles.container}>
@@ -49,7 +65,11 @@ export default function MiniPlayer() {
           </TouchableOpacity>
 
           <TouchableOpacity onPress={togglePlayPause} style={styles.playBtn}>
-            <Ionicons name={isPlaying ? 'pause' : 'play'} size={22} color={COLORS.black} />
+            {playbackState.state === State.Buffering || playbackState.state === State.Loading ? (
+               <Ionicons name="ellipsis-horizontal" size={22} color={COLORS.black} />
+            ) : (
+               <Ionicons name={isPlaying ? 'pause' : 'play'} size={22} color={COLORS.black} style={{ marginLeft: isPlaying ? 0 : 2 }} />
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity onPress={skipNext} style={styles.ctrlBtn}>
