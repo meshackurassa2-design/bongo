@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -45,8 +46,17 @@ export default function AIStudioScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Stack.Screen options={{ title: 'AI Studio', headerStyle: { backgroundColor: COLORS.card }, headerTintColor: COLORS.textPrimary }} />
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <Stack.Screen options={{ title: 'AI Studio', headerStyle: { backgroundColor: COLORS.card }, headerTintColor: COLORS.textPrimary, headerShown: false }} />
+      
+      {/* Header */}
+      <View style={styles.customHeader}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Ionicons name="chevron-back" size={28} color={COLORS.textPrimary} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>AI Studio</Text>
+        <View style={{ width: 28 }} />
+      </View>
       
       {/* Tabs */}
       <View style={styles.tabContainer}>
@@ -82,7 +92,7 @@ export default function AIStudioScreen() {
           )}
         </ScrollView>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -217,6 +227,9 @@ function TaskItem({ task }: { task: AISongTask }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
+  customHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: COLORS.divider },
+  backBtn: { padding: 4, marginLeft: -4 },
+  headerTitle: { color: COLORS.textPrimary, fontSize: 18, fontWeight: '700' },
   tabContainer: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: COLORS.divider },
   tab: { flex: 1, paddingVertical: 16, alignItems: 'center' },
   activeTab: { borderBottomWidth: 2, borderBottomColor: COLORS.gold },
