@@ -40,8 +40,7 @@
       [
         "expo-document-picker",
         { "iCloudContainerEnvironment": "Production" }
-      ],
-      "./withDisableCodeSigning.js"
+      ]
     ],
     "experiments": {
       "typedRoutes": true
