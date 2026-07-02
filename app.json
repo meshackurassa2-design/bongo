@@ -16,12 +16,7 @@
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.bongostream.app",
-      "infoPlist": {
-        "UIBackgroundModes": [
-          "audio"
-        ]
-      }
+      "bundleIdentifier": "com.bongostream.app"
     },
     "android": {
       "adaptiveIcon": {
