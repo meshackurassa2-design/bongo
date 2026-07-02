@@ -32,8 +32,7 @@
       "permissions": [
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
-        "RECORD_AUDIO",
-        "com.android.vending.BILLING"
+        "RECORD_AUDIO"
       ]
     },
     "web": {

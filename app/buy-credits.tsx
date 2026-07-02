@@ -1,79 +1,53 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, ScrollView, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import Purchases, { PurchasesPackage } from 'react-native-purchases';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
 import { COLORS } from '../constants';
 
-const PACKAGES_META: Record<string, { credits: number; songs: number; oldPrice: string | null; saveText: string | null; popular: boolean }> = {
-  'credits_small_120': { credits: 120, songs: 10, oldPrice: null, saveText: null, popular: false },
-  'credits_medium_600': { credits: 600, songs: 50, oldPrice: '16,000 TSH', saveText: 'SAVE 10%', popular: true },
-  'credits_large_1200': { credits: 1200, songs: 100, oldPrice: '32,000 TSH', saveText: 'SAVE 17%', popular: false },
-};
+const PACKAGES = [
+  { id: 'small', credits: 120, songs: 10, price: '3,200 TSH', oldPrice: null, saveText: null, popular: false },
+  { id: 'medium', credits: 600, songs: 50, price: '14,500 TSH', oldPrice: '16,000', saveText: 'SAVE 10%', popular: true },
+  { id: 'large', credits: 1200, songs: 100, price: '26,500 TSH', oldPrice: '32,000', saveText: 'SAVE 17%', popular: false },
+];
 
 export default function BuyCreditsScreen() {
   const router = useRouter();
   const { session, profile, fetchProfile } = useAuthStore();
   const [processingId, setProcessingId] = useState<string | null>(null);
-  const [packages, setPackages] = useState<PurchasesPackage[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchOfferings = async () => {
-      try {
-        if (Platform.OS === 'web') {
-          setIsLoading(false);
-          return; // RevenueCat not supported on web
-        }
-        const offerings = await Purchases.getOfferings();
-        if (offerings.current !== null && offerings.current.availablePackages.length !== 0) {
-          setPackages(offerings.current.availablePackages);
-        }
-      } catch (e) {
-        console.error('Error fetching offerings', e);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchOfferings();
-  }, []);
-
-  const handlePurchase = async (pkg: PurchasesPackage) => {
+  const handlePurchase = async (pkg: typeof PACKAGES[0]) => {
     if (!session?.user) {
       Alert.alert("Error", "You must be logged in to buy credits.");
       return;
     }
 
-    setProcessingId(pkg.identifier);
+    setProcessingId(pkg.id);
     
+    // Simulate payment gateway delay (Dummy Payment UI)
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
     try {
-      if (Platform.OS === 'web') throw new Error("In-App Purchases are not supported on the web.");
-      
-      const { customerInfo } = await Purchases.purchasePackage(pkg);
-      
-      const meta = PACKAGES_META[pkg.product.identifier] || { credits: 0 };
-      if (meta.credits > 0) {
-        const { error } = await supabase.rpc('add_credits', { 
-          user_id: session.user.id, 
-          amount: meta.credits 
-        });
-        if (error) throw error;
-        await fetchProfile(session.user.id);
-      }
+      const { data, error } = await supabase.rpc('add_credits', { 
+        user_id: session.user.id, 
+        amount: pkg.credits 
+      });
+
+      if (error) throw error;
+
+      // Refresh profile to update balance
+      await fetchProfile(session.user.id);
       
       Alert.alert(
         "Purchase Successful!", 
-        "Thank you for your purchase. Your credits have been added.",
+        `You have successfully purchased ${pkg.credits} credits.`,
         [{ text: "Awesome", onPress: () => router.back() }]
       );
     } catch (error: any) {
-      if (!error.userCancelled) {
-        Alert.alert("Purchase Failed", error.message || "An unknown error occurred.");
-      }
+      Alert.alert("Purchase Failed", error.message || "An unknown error occurred.");
     } finally {
       setProcessingId(null);
     }
@@ -107,57 +81,44 @@ export default function BuyCreditsScreen() {
           <Text style={styles.heroSub}>Generate incredible AI songs. Each song costs 12 credits.</Text>
         </View>
 
-        {isLoading ? (
-          <ActivityIndicator color={COLORS.gold} size="large" style={{ marginTop: 40 }} />
-        ) : (
-          <View style={styles.packagesContainer}>
-            {packages.map((pkg) => {
-              const meta = PACKAGES_META[pkg.product.identifier] || { credits: pkg.product.title, songs: '?', oldPrice: null, saveText: null, popular: false };
-              return (
-              <TouchableOpacity 
-                key={pkg.identifier} 
-                style={[styles.packageCard, meta.popular && styles.packageCardPopular]}
-                onPress={() => handlePurchase(pkg)}
-                disabled={processingId !== null}
-              >
-                {meta.popular && (
-                  <View style={styles.popularBadge}>
-                    <Text style={styles.popularText}>MOST POPULAR</Text>
-                  </View>
-                )}
-                
-                <View style={styles.packageInfo}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Ionicons name="diamond" size={20} color={COLORS.gold} />
-                    <Text style={styles.creditAmount}>{meta.credits}</Text>
-                  </View>
-                  <Text style={styles.creditLabel}>{meta.songs} Songs</Text>
+        <View style={styles.packagesContainer}>
+          {PACKAGES.map((pkg) => (
+            <TouchableOpacity 
+              key={pkg.id} 
+              style={[styles.packageCard, pkg.popular && styles.packageCardPopular]}
+              onPress={() => handlePurchase(pkg)}
+              disabled={processingId !== null}
+            >
+              {pkg.popular && (
+                <View style={styles.popularBadge}>
+                  <Text style={styles.popularText}>MOST POPULAR</Text>
                 </View>
+              )}
+              
+              <View style={styles.packageInfo}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="diamond" size={20} color={COLORS.gold} />
+                  <Text style={styles.creditAmount}>{pkg.credits}</Text>
+                </View>
+                <Text style={styles.creditLabel}>{pkg.songs} Songs</Text>
+              </View>
 
-                <View style={styles.priceContainer}>
-                  <View style={styles.priceTopRow}>
-                    {meta.saveText && <Text style={styles.saveTextInline}>{meta.saveText}</Text>}
-                    {meta.oldPrice && <Text style={styles.oldPrice}>{meta.oldPrice}</Text>}
-                  </View>
-                  <View style={styles.priceBtn}>
-                    {processingId === pkg.identifier ? (
-                      <ActivityIndicator color={COLORS.black} size="small" />
-                    ) : (
-                      <Text style={styles.priceText}>{pkg.product.priceString}</Text>
-                    )}
-                  </View>
+              <View style={styles.priceContainer}>
+                <View style={styles.priceTopRow}>
+                  {pkg.saveText && <Text style={styles.saveTextInline}>{pkg.saveText}</Text>}
+                  {pkg.oldPrice && <Text style={styles.oldPrice}>{pkg.oldPrice}</Text>}
                 </View>
-              </TouchableOpacity>
-              );
-            })}
-            
-            {packages.length === 0 && (
-              <Text style={{ color: COLORS.textSecondary, textAlign: 'center', marginTop: 20 }}>
-                No packages available. Please configure RevenueCat.
-              </Text>
-            )}
-          </View>
-        )}
+                <View style={styles.priceBtn}>
+                  {processingId === pkg.id ? (
+                    <ActivityIndicator color={COLORS.black} size="small" />
+                  ) : (
+                    <Text style={styles.priceText}>{pkg.price}</Text>
+                  )}
+                </View>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
