@@ -7,7 +7,6 @@ import { ThemeProvider, DarkTheme } from '@react-navigation/native';
 import { StyleSheet, LogBox } from 'react-native';
 import AnimatedSplash from '../components/AnimatedSplash';
 import '../i18n';
-import { useOfflineStore } from '../store/offlineStore';
 
 // Ignore harmless background Supabase auth network errors in dev mode
 LogBox.ignoreLogs(['TypeError: Network request failed']);
@@ -28,9 +27,6 @@ export default function RootLayout() {
   useEffect(() => {
     // Initialize Auth Store
     useAuthStore.getState().init();
-    
-    // Check offline songs
-    useOfflineStore.getState().init();
   }, []);
 
   useEffect(() => {
