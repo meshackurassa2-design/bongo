@@ -37,10 +37,7 @@
     "plugins": [
       "expo-router",
       "expo-av",
-      [
-        "expo-document-picker",
-        { "iCloudContainerEnvironment": "Production" }
-      ]
+      "expo-document-picker"
     ],
     "experiments": {
       "typedRoutes": true
