@@ -2,12 +2,12 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { supabase } from '../lib/supabase';
-import { useAuthStore } from '../store/authStore';
-import { COLORS, Track } from '../constants';
-import { usePlayerStore } from '../store/playerStore';
-import { useOfflineStore } from '../store/offlineStore';
-import TrackItem from '../components/TrackItem';
+import { supabase } from '../../lib/supabase';
+import { useAuthStore } from '../../store/authStore';
+import { COLORS, Track } from '../../constants';
+import { usePlayerStore } from '../../store/playerStore';
+import { useOfflineStore } from '../../store/offlineStore';
+import TrackItem from '../../components/TrackItem';
 
 export default function LibraryScreen() {
   const router = useRouter();
