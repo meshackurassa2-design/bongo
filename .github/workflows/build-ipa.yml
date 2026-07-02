@@ -38,7 +38,7 @@ jobs:
       - name: Build Unsigned App with xcodebuild
         run: |
           cd ios
-          xcodebuild -workspace BongoStream.xcworkspace -scheme BongoStream -configuration Release -sdk iphoneos -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" ENTITLEMENTS_REQUIRED=NO COMPILER_INDEX_STORE_ENABLE=NO build
+          NODE_BINARY=$(which node) xcodebuild -workspace BongoStream.xcworkspace -scheme BongoStream -configuration Release -sdk iphoneos -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" ENTITLEMENTS_REQUIRED=NO COMPILER_INDEX_STORE_ENABLE=NO build
 
       - name: Package App into IPA
         run: |
