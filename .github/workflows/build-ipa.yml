@@ -21,7 +21,8 @@ jobs:
           node-version: 18.x
 
       - name: Fix Node Path for Xcode
-        run: sudo ln -s $(which node) /usr/local/bin/node
+        continue-on-error: true
+        run: sudo ln -sf $(which node) /usr/local/bin/node
 
       - name: Install dependencies
         run: npm install --legacy-peer-deps
