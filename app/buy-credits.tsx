@@ -100,7 +100,7 @@ export default function BuyCreditsScreen() {
             <View style={styles.packageHeader}>
               <Text style={styles.packageTitle}>Need more credits?</Text>
             </View>
-            <Text style={styles.packageDesc}>Generate fully produced songs or upload custom audio. 1 Credit = 500 TZS.</Text>
+            <Text style={styles.packageDesc}>Generate fully produced songs or upload custom audio. 1 Credit = 500 TZS (Equivalent to 2 full songs!).</Text>
             
             <View style={styles.divider} />
 
