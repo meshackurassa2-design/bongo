@@ -107,6 +107,11 @@ export default function AIStudioScreen() {
           <TouchableOpacity style={[styles.generateBtn, isGenerating && { opacity: 0.7 }]} onPress={handleGenerate} disabled={isGenerating}>
             {isGenerating ? <ActivityIndicator color={COLORS.black} /> : <Text style={styles.generateBtnText}>Generate with AI</Text>}
           </TouchableOpacity>
+
+          <TouchableOpacity style={styles.buyCreditsInlineBtn} onPress={() => router.push('/buy-credits')}>
+            <Ionicons name="diamond" size={16} color={COLORS.gold} />
+            <Text style={styles.buyCreditsInlineText}>Get More Credits</Text>
+          </TouchableOpacity>
         </ScrollView>
       ) : (
         <ScrollView style={styles.content} contentContainerStyle={{ padding: 16 }}>
@@ -359,8 +364,10 @@ const styles = StyleSheet.create({
   label: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '600', marginBottom: 8, marginTop: 12 },
   input: { backgroundColor: COLORS.card, color: COLORS.textPrimary, padding: 14, borderRadius: 12, fontSize: 15 },
   textArea: { height: 180 },
-  generateBtn: { backgroundColor: COLORS.gold, paddingVertical: 16, borderRadius: 30, alignItems: 'center', marginTop: 24, marginBottom: 40 },
+  generateBtn: { backgroundColor: COLORS.gold, paddingVertical: 16, borderRadius: 30, alignItems: 'center', marginTop: 24, marginBottom: 16 },
   generateBtnText: { color: COLORS.black, fontSize: 16, fontWeight: '700' },
+  buyCreditsInlineBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.cardAlt, paddingVertical: 14, borderRadius: 30, marginBottom: 40, gap: 8 },
+  buyCreditsInlineText: { color: COLORS.gold, fontSize: 15, fontWeight: '700' },
   creditBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.cardAlt, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, gap: 4 },
   creditText: { color: COLORS.gold, fontSize: 13, fontWeight: 'bold' },
   emptyText: { color: COLORS.textTertiary, textAlign: 'center', marginTop: 40 },
