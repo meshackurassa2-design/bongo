@@ -103,7 +103,7 @@ export default function BuyCreditsScreen() {
             
             <View style={styles.divider} />
             
-            <Text style={styles.label}>Pay with Mobile Money</Text>
+            <Text style={styles.label}>Pay with Mobile Money <Text style={{ color: COLORS.gold, fontSize: 12 }}>(Airtel & Halopesa only)</Text></Text>
             <View style={styles.inputRow}>
               <Ionicons name="phone-portrait-outline" size={20} color={COLORS.gold} />
               <TextInput 
