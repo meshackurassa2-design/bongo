@@ -19,22 +19,43 @@ export interface SunoTaskResponse {
   data?: SunoAudioData[];
 }
 
-export const generateMusic = async (prompt: string, tags: string, title: string): Promise<string> => {
+export const generateMusic = async (
+  prompt: string, 
+  tags: string, 
+  title: string,
+  uploadUrl?: string,
+  vocalGender?: 'Male' | 'Female' | 'Any',
+  weirdness?: number,
+  styleInfluence?: number
+): Promise<string> => {
+  // Append vocal gender to tags if selected
+  let finalTags = tags;
+  if (vocalGender && vocalGender !== 'Any') {
+    finalTags = finalTags ? `${finalTags}, ${vocalGender.toLowerCase()} vocals` : `${vocalGender.toLowerCase()} vocals`;
+  }
+
+  const payload: any = {
+    prompt,
+    tags: finalTags,
+    title,
+    customMode: true,
+    instrumental: false,
+    model: "V4_5ALL",
+    callBackUrl: "https://httpbin.org/post",
+  };
+
+  // Add advanced parameters if they are provided
+  if (uploadUrl) payload.uploadUrl = uploadUrl;
+  if (typeof weirdness === 'number') payload.weirdness = weirdness;
+  if (typeof styleInfluence === 'number') payload.style_influence = styleInfluence;
+
   const response = await fetch(`${BASE_URL}/generate`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${API_KEY}`,
     },
-    body: JSON.stringify({
-      prompt,
-      tags,
-      title,
-      customMode: true,
-      instrumental: false,
-      model: "V4_5ALL",
-      callBackUrl: "https://httpbin.org/post",
-    }),
+    body: JSON.stringify(payload),
   });
 
   if (!response.ok) {

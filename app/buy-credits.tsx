@@ -11,6 +11,7 @@ export default function BuyCreditsScreen() {
   const router = useRouter();
   const { session, profile, fetchProfile } = useAuthStore();
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [creditsToBuy, setCreditsToBuy] = useState('1');
   const [isProcessing, setIsProcessing] = useState(false);
   const [transactionId, setTransactionId] = useState<string | null>(null);
 
@@ -58,14 +59,15 @@ export default function BuyCreditsScreen() {
       // Note: Edge function URLs should match your Supabase project
       // For local testing, we might call it directly or use Supabase functions client
       const { data, error } = await supabase.functions.invoke('create-payment', {
-        body: { phoneNumber }
+        body: { phoneNumber, credits: creditsToBuy }
       });
 
       if (error) throw new Error(error.message);
       if (!data || !data.success) throw new Error(data?.error || "Payment initiation failed");
 
       setTransactionId(data.transactionId);
-      Alert.alert("Check Your Phone", "Please enter your Mobile Money PIN on your phone to complete the purchase of 500 TZS.");
+      const totalAmount = parseInt(creditsToBuy) * 500;
+      Alert.alert("Check Your Phone", `Please enter your Mobile Money PIN on your phone to complete the purchase of ${totalAmount} TZS.`);
       
     } catch (e: any) {
       setIsProcessing(false);
@@ -96,12 +98,25 @@ export default function BuyCreditsScreen() {
 
           <View style={styles.packageCard}>
             <View style={styles.packageHeader}>
-              <Text style={styles.packageTitle}>1 Song Generation</Text>
-              <Text style={styles.packagePrice}>500 TZS</Text>
+              <Text style={styles.packageTitle}>Need more credits?</Text>
             </View>
-            <Text style={styles.packageDesc}>Generate a fully produced song with vocals and music using AI Studio.</Text>
+            <Text style={styles.packageDesc}>Generate fully produced songs or upload custom audio. 1 Credit = 500 TZS.</Text>
             
             <View style={styles.divider} />
+
+            <Text style={styles.label}>How many credits?</Text>
+            <View style={[styles.inputRow, { marginBottom: 16 }]}>
+              <Ionicons name="diamond" size={20} color={COLORS.gold} />
+              <TextInput 
+                style={styles.input} 
+                placeholder="Number of credits (e.g. 2)" 
+                placeholderTextColor={COLORS.textTertiary}
+                keyboardType="number-pad"
+                value={creditsToBuy}
+                onChangeText={setCreditsToBuy}
+                editable={!isProcessing}
+              />
+            </View>
             
             <Text style={styles.label}>Pay with Mobile Money <Text style={{ color: COLORS.gold, fontSize: 12 }}>(Airtel & Halopesa only)</Text></Text>
             <View style={styles.inputRow}>
@@ -128,7 +143,7 @@ export default function BuyCreditsScreen() {
                   <Text style={styles.payBtnText}>Waiting for PIN...</Text>
                 </View>
               ) : (
-                <Text style={styles.payBtnText}>Pay 500 TZS</Text>
+                <Text style={styles.payBtnText}>Pay {(parseInt(creditsToBuy) || 1) * 500} TZS</Text>
               )}
             </TouchableOpacity>
 

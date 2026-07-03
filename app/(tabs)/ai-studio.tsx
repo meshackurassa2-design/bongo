@@ -7,6 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import * as DocumentPicker from 'expo-document-picker';
+import Slider from '@react-native-community/slider';
 import { supabase } from '../../lib/supabase';
 import { generateMusic, getTaskInfo, SunoAudioData, SunoTaskStatus } from '../../lib/sunoApi';
 import { useAIStore, AISongTask } from '../../store/aiStore';
@@ -26,20 +28,44 @@ export default function AIStudioScreen() {
   const [isPublishing, setIsPublishing] = useState<Record<string, boolean>>({});
   const [isDownloading, setIsDownloading] = useState<Record<string, boolean>>({});
 
+  // Advanced Options State
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [vocalGender, setVocalGender] = useState<'Male' | 'Female' | 'Any'>('Any');
+  const [weirdness, setWeirdness] = useState<number>(50);
+  const [styleInfluence, setStyleInfluence] = useState<number>(50);
+  const [audioUri, setAudioUri] = useState<string | null>(null);
+  const [audioName, setAudioName] = useState<string | null>(null);
+  const [isUploadingAudio, setIsUploadingAudio] = useState(false);
+
   const { tasks, addTask, updateTask, removeTask } = useAIStore();
   const { session, profile } = useAuthStore();
 
   const currentTrack = usePlayerStore(s => s.currentTrack);
+
+  const handlePickAudio = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({ type: 'audio/*' });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setAudioUri(result.assets[0].uri);
+        setAudioName(result.assets[0].name);
+      }
+    } catch (e: any) {
+      Alert.alert("Error picking audio", e.message);
+    }
+  };
 
   const handleGenerate = async () => {
     if (!title || !style || !lyrics) {
       Alert.alert("Missing Fields", "Please fill out title, style, and lyrics.");
       return;
     }
-    if ((profile?.credits || 0) < 1) {
+    
+    const requiredCredits = audioUri ? 2 : 1;
+
+    if ((profile?.credits || 0) < requiredCredits) {
       Alert.alert(
         "Not Enough Credits", 
-        "You need 1 credit to generate a song.",
+        `You need ${requiredCredits} credit${requiredCredits > 1 ? 's' : ''} to generate this song.`,
         [
           { text: "Cancel", style: "cancel" },
           { text: "Buy Credits", onPress: () => router.push('/buy-credits') }
@@ -49,18 +75,33 @@ export default function AIStudioScreen() {
     }
     setIsGenerating(true);
     try {
-      const { data, error } = await supabase.rpc('deduct_credits', { user_id: session?.user.id, amount: 1 });
+      const { data, error } = await supabase.rpc('deduct_credits', { user_id: session?.user.id, amount: requiredCredits });
       if (error || !data) throw new Error("Failed to deduct credits");
       
-      const taskId = await generateMusic(lyrics, style, title);
+      let finalAudioUrl = undefined;
+      if (audioUri) {
+        setIsUploadingAudio(true);
+        const base64 = await FileSystem.readAsStringAsync(audioUri, { encoding: FileSystem.EncodingType.Base64 });
+        const fileName = `${Date.now()}_${audioName || 'audio.mp3'}`;
+        const { error: uploadErr } = await supabase.storage.from('audio').upload(`uploads/${fileName}`, decode(base64), { contentType: 'audio/mpeg' });
+        if (uploadErr) throw uploadErr;
+        
+        finalAudioUrl = supabase.storage.from('audio').getPublicUrl(`uploads/${fileName}`).data.publicUrl;
+        setIsUploadingAudio(false);
+      }
+
+      const taskId = await generateMusic(lyrics, style, title, finalAudioUrl, vocalGender, weirdness, styleInfluence);
       addTask(taskId, title);
       setTitle('');
       setStyle('');
       setLyrics('');
+      setAudioUri(null);
+      setAudioName(null);
       setActiveTab('Workspace');
       // Refresh profile to update local state
       if (session?.user.id) useAuthStore.getState().fetchProfile(session.user.id);
     } catch (e: any) {
+      setIsUploadingAudio(false);
       Alert.alert("Error", e.message);
     } finally {
       setIsGenerating(false);
@@ -104,8 +145,75 @@ export default function AIStudioScreen() {
           <Text style={styles.label}>Lyrics (Up to 3000 chars)</Text>
           <TextInput style={[styles.input, styles.textArea]} placeholder="Write your verses and chorus here..." placeholderTextColor={COLORS.textTertiary} value={lyrics} onChangeText={setLyrics} multiline textAlignVertical="top" />
 
+          {/* Advanced Options Toggle */}
+          <TouchableOpacity style={styles.advancedToggle} onPress={() => setShowAdvanced(!showAdvanced)}>
+            <Text style={styles.advancedToggleText}>Advanced Options</Text>
+            <Ionicons name={showAdvanced ? "chevron-up" : "chevron-down"} size={20} color={COLORS.gold} />
+          </TouchableOpacity>
+
+          {showAdvanced && (
+            <View style={styles.advancedContainer}>
+              <Text style={styles.label}>Upload Base Audio (+1 Credit)</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <TouchableOpacity style={styles.uploadBtn} onPress={handlePickAudio}>
+                  <Ionicons name="cloud-upload-outline" size={20} color={COLORS.black} />
+                  <Text style={styles.uploadBtnText}>{audioName ? 'Change Audio' : 'Upload Audio'}</Text>
+                </TouchableOpacity>
+                {audioName && (
+                  <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Text style={{ color: COLORS.textSecondary, fontSize: 12, flex: 1 }} numberOfLines={1}>{audioName}</Text>
+                    <TouchableOpacity onPress={() => { setAudioUri(null); setAudioName(null); }} style={{ padding: 4 }}>
+                      <Ionicons name="close-circle" size={20} color={COLORS.error} />
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+
+              <Text style={[styles.label, { marginTop: 24 }]}>Vocal Gender</Text>
+              <View style={styles.genderRow}>
+                {['Male', 'Female', 'Any'].map(g => (
+                  <TouchableOpacity 
+                    key={g} 
+                    style={[styles.genderBtn, vocalGender === g && styles.genderBtnActive]}
+                    onPress={() => setVocalGender(g as any)}
+                  >
+                    <Text style={[styles.genderText, vocalGender === g && styles.genderTextActive]}>{g}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={[styles.label, { marginTop: 24 }]}>Weirdness: {weirdness}%</Text>
+              <Slider
+                style={{ width: '100%', height: 40 }}
+                minimumValue={0}
+                maximumValue={100}
+                step={1}
+                value={weirdness}
+                onValueChange={setWeirdness}
+                minimumTrackTintColor={COLORS.gold}
+                maximumTrackTintColor={COLORS.divider}
+                thumbTintColor={COLORS.gold}
+              />
+              <Text style={{ color: COLORS.textTertiary, fontSize: 12, marginBottom: 8 }}>Controls the variance and creative liberty of the generation.</Text>
+
+              <Text style={[styles.label, { marginTop: 16 }]}>Style Influence: {styleInfluence}%</Text>
+              <Slider
+                style={{ width: '100%', height: 40 }}
+                minimumValue={0}
+                maximumValue={100}
+                step={1}
+                value={styleInfluence}
+                onValueChange={setStyleInfluence}
+                minimumTrackTintColor={COLORS.gold}
+                maximumTrackTintColor={COLORS.divider}
+                thumbTintColor={COLORS.gold}
+              />
+              <Text style={{ color: COLORS.textTertiary, fontSize: 12 }}>How strictly the AI follows the genre prompts.</Text>
+            </View>
+          )}
+
           <TouchableOpacity style={[styles.generateBtn, isGenerating && { opacity: 0.7 }]} onPress={handleGenerate} disabled={isGenerating}>
-            {isGenerating ? <ActivityIndicator color={COLORS.black} /> : <Text style={styles.generateBtnText}>Generate with AI</Text>}
+            {isGenerating ? <ActivityIndicator color={COLORS.black} /> : <Text style={styles.generateBtnText}>{isUploadingAudio ? 'Uploading Audio...' : 'Generate with AI'}</Text>}
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.buyCreditsInlineBtn} onPress={() => router.push('/buy-credits')}>
@@ -364,6 +472,16 @@ const styles = StyleSheet.create({
   label: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '600', marginBottom: 8, marginTop: 12 },
   input: { backgroundColor: COLORS.card, color: COLORS.textPrimary, padding: 14, borderRadius: 12, fontSize: 15 },
   textArea: { height: 180 },
+  advancedToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: COLORS.cardAlt, padding: 16, borderRadius: 12, marginTop: 20 },
+  advancedToggleText: { color: COLORS.gold, fontSize: 15, fontWeight: '700' },
+  advancedContainer: { backgroundColor: COLORS.card, padding: 16, borderRadius: 12, marginTop: 8, borderWidth: 1, borderColor: COLORS.divider },
+  uploadBtn: { backgroundColor: COLORS.gold, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  uploadBtnText: { color: COLORS.black, fontWeight: '700', fontSize: 14 },
+  genderRow: { flexDirection: 'row', gap: 10 },
+  genderBtn: { flex: 1, paddingVertical: 10, borderRadius: 8, backgroundColor: COLORS.cardAlt, alignItems: 'center', borderWidth: 1, borderColor: 'transparent' },
+  genderBtnActive: { borderColor: COLORS.gold, backgroundColor: COLORS.gold + '20' },
+  genderText: { color: COLORS.textSecondary, fontWeight: '600', fontSize: 14 },
+  genderTextActive: { color: COLORS.gold },
   generateBtn: { backgroundColor: COLORS.gold, paddingVertical: 16, borderRadius: 30, alignItems: 'center', marginTop: 24, marginBottom: 16 },
   generateBtnText: { color: COLORS.black, fontSize: 16, fontWeight: '700' },
   buyCreditsInlineBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.cardAlt, paddingVertical: 14, borderRadius: 30, marginBottom: 40, gap: 8 },
