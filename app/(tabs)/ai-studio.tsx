@@ -36,10 +36,10 @@ export default function AIStudioScreen() {
       Alert.alert("Missing Fields", "Please fill out title, style, and lyrics.");
       return;
     }
-    if ((profile?.credits || 0) < 12) {
+    if ((profile?.credits || 0) < 1) {
       Alert.alert(
         "Not Enough Credits", 
-        "You need 12 credits to generate a song.",
+        "You need 1 credit to generate a song.",
         [
           { text: "Cancel", style: "cancel" },
           { text: "Buy Credits", onPress: () => router.push('/buy-credits') }
@@ -49,7 +49,7 @@ export default function AIStudioScreen() {
     }
     setIsGenerating(true);
     try {
-      const { data, error } = await supabase.rpc('deduct_credits', { user_id: session?.user.id, amount: 12 });
+      const { data, error } = await supabase.rpc('deduct_credits', { user_id: session?.user.id, amount: 1 });
       if (error || !data) throw new Error("Failed to deduct credits");
       
       const taskId = await generateMusic(lyrics, style, title);

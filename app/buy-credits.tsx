@@ -1,55 +1,75 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
 import { COLORS } from '../constants';
 
-const PACKAGES = [
-  { id: 'small', credits: 120, songs: 10, price: '3,200 TSH', oldPrice: null, saveText: null, popular: false },
-  { id: 'medium', credits: 600, songs: 50, price: '14,500 TSH', oldPrice: '16,000', saveText: 'SAVE 10%', popular: true },
-  { id: 'large', credits: 1200, songs: 100, price: '26,500 TSH', oldPrice: '32,000', saveText: 'SAVE 17%', popular: false },
-];
-
 export default function BuyCreditsScreen() {
   const router = useRouter();
   const { session, profile, fetchProfile } = useAuthStore();
-  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [transactionId, setTransactionId] = useState<string | null>(null);
 
-  const handlePurchase = async (pkg: typeof PACKAGES[0]) => {
-    if (!session?.user) {
-      Alert.alert("Error", "You must be logged in to buy credits.");
+  // Listen for transaction status changes via Supabase Realtime
+  useEffect(() => {
+    if (!transactionId) return;
+
+    const channel = supabase.channel(`public:transactions:id=eq.${transactionId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'transactions',
+        filter: `id=eq.${transactionId}`
+      }, (payload) => {
+        const newStatus = payload.new.status;
+        if (newStatus === 'completed') {
+          setIsProcessing(false);
+          Alert.alert("Success!", "Payment received. You now have 1 new credit!", [
+            { text: "Awesome", onPress: () => {
+              if (session?.user.id) fetchProfile(session.user.id);
+              router.back();
+            }}
+          ]);
+        } else if (newStatus === 'failed') {
+          setIsProcessing(false);
+          Alert.alert("Payment Failed", "The payment was cancelled or failed.");
+          setTransactionId(null);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [transactionId]);
+
+  const handlePayment = async () => {
+    if (!phoneNumber || phoneNumber.length < 9) {
+      Alert.alert("Invalid Phone", "Please enter a valid mobile money number.");
       return;
     }
-
-    setProcessingId(pkg.id);
     
-    // Simulate payment gateway delay (Dummy Payment UI)
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
+    setIsProcessing(true);
     try {
-      const { data, error } = await supabase.rpc('add_credits', { 
-        user_id: session.user.id, 
-        amount: pkg.credits 
+      // Note: Edge function URLs should match your Supabase project
+      // For local testing, we might call it directly or use Supabase functions client
+      const { data, error } = await supabase.functions.invoke('create-payment', {
+        body: { phoneNumber }
       });
 
-      if (error) throw error;
+      if (error) throw new Error(error.message);
+      if (!data || !data.success) throw new Error(data?.error || "Payment initiation failed");
 
-      // Refresh profile to update balance
-      await fetchProfile(session.user.id);
+      setTransactionId(data.transactionId);
+      Alert.alert("Check Your Phone", "Please enter your Mobile Money PIN on your phone to complete the purchase of 500 TZS.");
       
-      Alert.alert(
-        "Purchase Successful!", 
-        `You have successfully purchased ${pkg.credits} credits.`,
-        [{ text: "Awesome", onPress: () => router.back() }]
-      );
-    } catch (error: any) {
-      Alert.alert("Purchase Failed", error.message || "An unknown error occurred.");
-    } finally {
-      setProcessingId(null);
+    } catch (e: any) {
+      setIsProcessing(false);
+      Alert.alert("Error", e.message);
     }
   };
 
@@ -57,97 +77,93 @@ export default function BuyCreditsScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <Stack.Screen options={{ headerShown: false }} />
       
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="close" size={28} color={COLORS.textPrimary} />
+          <Ionicons name="chevron-back" size={28} color={COLORS.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Store</Text>
-        <View style={styles.balanceBadge}>
-          <Ionicons name="diamond" size={14} color={COLORS.gold} />
-          <Text style={styles.balanceText}>{profile?.credits || 0}</Text>
-        </View>
+        <Text style={styles.headerTitle}>Get Credits</Text>
+        <View style={{ width: 28 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.heroSection}>
-          <LinearGradient
-            colors={[COLORS.goldLight, COLORS.goldDark]}
-            style={styles.heroIcon}
-          >
-            <Ionicons name="diamond" size={48} color={COLORS.black} />
-          </LinearGradient>
-          <Text style={styles.heroTitle}>Get More Credits</Text>
-          <Text style={styles.heroSub}>Generate incredible AI songs. Each song costs 12 credits.</Text>
-        </View>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.content}>
+          
+          <View style={styles.balanceCard}>
+            <Ionicons name="diamond" size={32} color={COLORS.gold} />
+            <Text style={styles.balanceTitle}>Current Balance</Text>
+            <Text style={styles.balanceAmount}>{profile?.credits || 0} Credits</Text>
+          </View>
 
-        <View style={styles.packagesContainer}>
-          {PACKAGES.map((pkg) => (
+          <View style={styles.packageCard}>
+            <View style={styles.packageHeader}>
+              <Text style={styles.packageTitle}>1 Song Generation</Text>
+              <Text style={styles.packagePrice}>500 TZS</Text>
+            </View>
+            <Text style={styles.packageDesc}>Generate a fully produced song with vocals and music using AI Studio.</Text>
+            
+            <View style={styles.divider} />
+            
+            <Text style={styles.label}>Pay with Mobile Money</Text>
+            <View style={styles.inputRow}>
+              <Ionicons name="phone-portrait-outline" size={20} color={COLORS.gold} />
+              <TextInput 
+                style={styles.input} 
+                placeholder="e.g. 0754000000" 
+                placeholderTextColor={COLORS.textTertiary}
+                keyboardType="phone-pad"
+                value={phoneNumber}
+                onChangeText={setPhoneNumber}
+                editable={!isProcessing}
+              />
+            </View>
+
             <TouchableOpacity 
-              key={pkg.id} 
-              style={[styles.packageCard, pkg.popular && styles.packageCardPopular]}
-              onPress={() => handlePurchase(pkg)}
-              disabled={processingId !== null}
+              style={[styles.payBtn, isProcessing && { opacity: 0.7 }]} 
+              onPress={handlePayment} 
+              disabled={isProcessing}
             >
-              {pkg.popular && (
-                <View style={styles.popularBadge}>
-                  <Text style={styles.popularText}>MOST POPULAR</Text>
+              {isProcessing ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <ActivityIndicator color={COLORS.black} />
+                  <Text style={styles.payBtnText}>Waiting for PIN...</Text>
                 </View>
+              ) : (
+                <Text style={styles.payBtnText}>Pay 500 TZS</Text>
               )}
-              
-              <View style={styles.packageInfo}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Ionicons name="diamond" size={20} color={COLORS.gold} />
-                  <Text style={styles.creditAmount}>{pkg.credits}</Text>
-                </View>
-                <Text style={styles.creditLabel}>{pkg.songs} Songs</Text>
-              </View>
-
-              <View style={styles.priceContainer}>
-                <View style={styles.priceTopRow}>
-                  {pkg.saveText && <Text style={styles.saveTextInline}>{pkg.saveText}</Text>}
-                  {pkg.oldPrice && <Text style={styles.oldPrice}>{pkg.oldPrice}</Text>}
-                </View>
-                <View style={styles.priceBtn}>
-                  {processingId === pkg.id ? (
-                    <ActivityIndicator color={COLORS.black} size="small" />
-                  ) : (
-                    <Text style={styles.priceText}>{pkg.price}</Text>
-                  )}
-                </View>
-              </View>
             </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
+
+            <View style={styles.secureWrap}>
+              <Ionicons name="lock-closed" size={14} color={COLORS.textTertiary} />
+              <Text style={styles.secureText}>Secured by ClickPesa</Text>
+            </View>
+          </View>
+          
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: COLORS.divider },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 },
   backBtn: { padding: 4, marginLeft: -4 },
   headerTitle: { color: COLORS.textPrimary, fontSize: 18, fontWeight: '700' },
-  balanceBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.cardAlt, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, gap: 4 },
-  balanceText: { color: COLORS.gold, fontSize: 13, fontWeight: 'bold' },
-  content: { padding: 24 },
-  heroSection: { alignItems: 'center', marginBottom: 40, marginTop: 20 },
-  heroIcon: { width: 96, height: 96, borderRadius: 48, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
-  heroTitle: { color: COLORS.textPrimary, fontSize: 28, fontWeight: '800', marginBottom: 8 },
-  heroSub: { color: COLORS.textSecondary, fontSize: 15, textAlign: 'center', paddingHorizontal: 20, lineHeight: 22 },
-  packagesContainer: { gap: 16 },
-  packageCard: { backgroundColor: COLORS.card, borderRadius: 16, padding: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: COLORS.divider },
-  packageCardPopular: { borderColor: COLORS.gold, backgroundColor: '#2a2211' },
-  popularBadge: { position: 'absolute', top: -10, left: '50%', transform: [{ translateX: -45 }], backgroundColor: COLORS.gold, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
-  popularText: { color: COLORS.black, fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
-  packageInfo: { gap: 4 },
-  creditAmount: { color: COLORS.textPrimary, fontSize: 24, fontWeight: '800' },
-  creditLabel: { color: COLORS.textSecondary, fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
-  priceContainer: { alignItems: 'flex-end', gap: 6 },
-  priceTopRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginRight: 8 },
-  saveTextInline: { color: COLORS.gold, fontSize: 11, fontWeight: '800' },
-  oldPrice: { color: COLORS.textTertiary, fontSize: 12, textDecorationLine: 'line-through', fontWeight: '600' },
-  priceBtn: { backgroundColor: COLORS.gold, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 24, minWidth: 90, alignItems: 'center' },
-  priceText: { color: COLORS.black, fontSize: 16, fontWeight: '800' },
+  content: { padding: 16 },
+  balanceCard: { alignItems: 'center', backgroundColor: COLORS.card, padding: 24, borderRadius: 16, marginBottom: 24 },
+  balanceTitle: { color: COLORS.textSecondary, fontSize: 14, marginTop: 12, marginBottom: 4 },
+  balanceAmount: { color: COLORS.textPrimary, fontSize: 28, fontWeight: '900' },
+  packageCard: { backgroundColor: COLORS.card, borderRadius: 16, padding: 20, borderWidth: 1, borderColor: COLORS.gold + '40' },
+  packageHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  packageTitle: { color: COLORS.textPrimary, fontSize: 18, fontWeight: '700' },
+  packagePrice: { color: COLORS.gold, fontSize: 18, fontWeight: '900' },
+  packageDesc: { color: COLORS.textSecondary, fontSize: 14, lineHeight: 20 },
+  divider: { height: 1, backgroundColor: COLORS.divider, marginVertical: 20 },
+  label: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '600', marginBottom: 12 },
+  inputRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.cardAlt, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, gap: 10 },
+  input: { flex: 1, color: COLORS.textPrimary, fontSize: 16 },
+  payBtn: { backgroundColor: COLORS.gold, borderRadius: 12, padding: 16, alignItems: 'center', marginTop: 20 },
+  payBtnText: { color: COLORS.black, fontSize: 16, fontWeight: '800' },
+  secureWrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 16 },
+  secureText: { color: COLORS.textTertiary, fontSize: 12 },
 });
