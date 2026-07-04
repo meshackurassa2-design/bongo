@@ -11,17 +11,28 @@ export interface AISongTask {
   tracks?: SunoAudioData[];
 }
 
+export interface Persona {
+  id: string; // Suno Persona ID
+  name: string;
+  description: string;
+  createdAt: number;
+}
+
 interface AIStore {
   tasks: AISongTask[];
+  personas: Persona[];
   addTask: (taskId: string, title: string) => void;
   updateTask: (taskId: string, status: SunoTaskStatus, tracks?: SunoAudioData[]) => void;
   removeTask: (taskId: string) => void;
+  addPersona: (persona: Persona) => void;
+  removePersona: (id: string) => void;
 }
 
 export const useAIStore = create<AIStore>()(
   persist(
     (set) => ({
       tasks: [],
+      personas: [],
       addTask: (taskId, title) => set((state) => ({
         tasks: [{ taskId, title, status: 'PENDING', createdAt: Date.now() }, ...state.tasks]
       })),
@@ -30,6 +41,12 @@ export const useAIStore = create<AIStore>()(
       })),
       removeTask: (taskId) => set((state) => ({
         tasks: state.tasks.filter(t => t.taskId !== taskId)
+      })),
+      addPersona: (persona) => set((state) => ({
+        personas: [persona, ...state.personas]
+      })),
+      removePersona: (id) => set((state) => ({
+        personas: state.personas.filter(p => p.id !== id)
       })),
     }),
     {

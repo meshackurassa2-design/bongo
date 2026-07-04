@@ -65,6 +65,54 @@ export default function HomeScreen() {
         <Text style={styles.appName}>BONGO STREAM</Text>
       </LinearGradient>
 
+      {/* Featured Carousel */}
+      {trending.length > 0 && (
+        <View style={{ marginBottom: 24 }}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            pagingEnabled
+            snapToInterval={width - 32 + 16}
+            decelerationRate="fast"
+            contentContainerStyle={{ paddingHorizontal: 16, gap: 16 }}
+          >
+            {trending.slice(0, 5).map(track => (
+              <TouchableOpacity
+                key={`featured-${track.id}`}
+                activeOpacity={0.9}
+                onPress={() => playTrack(track, trending)}
+                style={{ width: width - 32, height: 220, borderRadius: 24, overflow: 'hidden', backgroundColor: COLORS.card }}
+              >
+                <Image
+                  source={{ uri: track.cover_url || undefined }}
+                  style={StyleSheet.absoluteFillObject}
+                  contentFit="cover"
+                  transition={200}
+                />
+                <LinearGradient colors={['transparent', 'rgba(0,0,0,0.9)']} style={StyleSheet.absoluteFillObject} />
+                <View style={{ flex: 1, padding: 20, justifyContent: 'flex-end' }}>
+                  <Text style={{ color: COLORS.gold, fontSize: 12, fontWeight: '800', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>Featured</Text>
+                  <Text style={{ color: COLORS.textPrimary, fontSize: 26, fontWeight: '900', marginBottom: 4 }} numberOfLines={1}>{track.title}</Text>
+                  <Text style={{ color: COLORS.textSecondary, fontSize: 16, fontWeight: '600', marginBottom: 16 }} numberOfLines={1}>{track.artist_name}</Text>
+                  
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <TouchableOpacity 
+                      style={{ backgroundColor: COLORS.gold, width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center' }}
+                      onPress={() => playTrack(track, trending)}
+                    >
+                      <Ionicons name={currentTrack?.id === track.id ? "pause" : "play"} size={22} color={COLORS.black} style={{ marginLeft: currentTrack?.id === track.id ? 0 : 3 }} />
+                    </TouchableOpacity>
+                    <Text style={{ color: COLORS.textPrimary, fontSize: 14, fontWeight: '700' }}>
+                      {currentTrack?.id === track.id ? "Playing Now" : "Listen Now"}
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
       {/* Sleek Genres (Pills) */}
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>{t('home.genres')}</Text>

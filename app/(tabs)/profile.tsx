@@ -56,10 +56,10 @@ export default function ProfileScreen() {
       </View>
 
       {/* Role badge */}
-      <View style={[styles.roleBadge, { borderColor: profile.role === 'artist' ? COLORS.gold : COLORS.textTertiary }]}>
-        <Ionicons name={profile.role === 'artist' ? 'mic' : 'headset'} size={16} color={profile.role === 'artist' ? COLORS.gold : COLORS.textSecondary} />
-        <Text style={[styles.roleText, { color: profile.role === 'artist' ? COLORS.gold : COLORS.textSecondary }]}>
-          {profile.role === 'artist' ? t('profile.artist') : t('profile.listener')}
+      <View style={[styles.roleBadge, { borderColor: (profile.role === 'artist' || profile.role === 'admin') ? COLORS.gold : COLORS.textTertiary }]}>
+        <Ionicons name={profile.role === 'admin' ? 'shield-checkmark' : profile.role === 'artist' ? 'mic' : 'headset'} size={16} color={(profile.role === 'artist' || profile.role === 'admin') ? COLORS.gold : COLORS.textSecondary} />
+        <Text style={[styles.roleText, { color: (profile.role === 'artist' || profile.role === 'admin') ? COLORS.gold : COLORS.textSecondary }]}>
+          {profile.role === 'admin' ? 'Admin' : profile.role === 'artist' ? t('profile.artist') : t('profile.listener')}
         </Text>
       </View>
 
@@ -73,6 +73,18 @@ export default function ProfileScreen() {
 
       {/* Primary Actions Group */}
       <View style={styles.settingsGroup}>
+        {profile.role === 'admin' && (
+          <>
+            <MenuRow icon="settings" label="Admin System Settings" iconColor={COLORS.error} onPress={() => router.push('/admin/settings')} />
+            <MenuRow icon="shield-checkmark" label="Admin Panel: Manage Tickets" iconColor={COLORS.error} onPress={() => router.push('/admin/tickets')} />
+          </>
+        )}
+        {(profile.role === 'artist' || profile.role === 'admin') && (
+          <MenuRow icon="stats-chart" label="Artist Analytics Dashboard" iconColor={COLORS.gold} onPress={() => router.push('/artist/dashboard')} />
+        )}
+        {profile.role !== 'artist' && profile.role !== 'admin' && (
+          <MenuRow icon="star" label="Become an Artist" iconColor={COLORS.gold} onPress={() => router.push('/settings/become-artist')} />
+        )}
         <MenuRow icon="diamond" label="Buy Credits" iconColor={COLORS.gold} onPress={() => router.push('/buy-credits')} />
         <MenuRow icon="library-outline" label={t('tabs.library') || "My Library"} iconColor={COLORS.textPrimary} onPress={() => router.push('/library')} />
         <MenuRow icon="person-outline" label={t('profile.edit_profile')} iconColor={COLORS.textPrimary} onPress={() => router.push('/settings/edit-profile')} isLast />
@@ -83,6 +95,7 @@ export default function ProfileScreen() {
       <View style={styles.settingsGroup}>
         <MenuRow icon="notifications-outline" label={t('profile.notifications')} iconColor={COLORS.textSecondary} onPress={() => router.push('/settings/notifications')} />
         <MenuRow icon="language-outline" label={t('settings.language')} iconColor={COLORS.textSecondary} onPress={() => router.push('/settings/language')} />
+        <MenuRow icon="headset-outline" label="Help & Support" iconColor={COLORS.textSecondary} onPress={() => router.push('/settings/support')} />
         <MenuRow icon="information-circle-outline" label={t('profile.about')} iconColor={COLORS.textSecondary} onPress={() => router.push('/settings/about')} isLast />
       </View>
 

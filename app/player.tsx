@@ -26,6 +26,8 @@ export default function PlayerScreen() {
     seekTo,
     toggleShuffle,
     toggleRepeat,
+    playbackRate,
+    setPlaybackRate,
   } = usePlayerStore();
 
   const { downloadTrack, isDownloaded, isDownloading, downloadProgress } = useOfflineStore();
@@ -93,6 +95,34 @@ export default function PlayerScreen() {
               color={isDownloaded(currentTrack.id) ? COLORS.gold : COLORS.textSecondary} 
             />
           )}
+        </TouchableOpacity>
+      </View>
+
+      <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 16 }}>
+        <TouchableOpacity 
+          style={{ 
+            flexDirection: 'row', 
+            alignItems: 'center', 
+            gap: 6, 
+            paddingHorizontal: 16, 
+            paddingVertical: 8, 
+            borderRadius: 20, 
+            backgroundColor: playbackRate !== 1.0 ? COLORS.gold : COLORS.cardAlt 
+          }}
+          onPress={() => {
+            const nextRate = playbackRate === 1.0 ? 1.5 : playbackRate === 1.5 ? 2.0 : playbackRate === 2.0 ? 0.5 : 1.0;
+            setPlaybackRate(nextRate);
+          }}
+        >
+          <Ionicons name="color-wand" size={16} color={playbackRate !== 1.0 ? COLORS.black : COLORS.textSecondary} />
+          <Text style={{ 
+            color: playbackRate !== 1.0 ? COLORS.black : COLORS.textSecondary, 
+            fontWeight: '800', 
+            fontSize: 12,
+            letterSpacing: 1
+          }}>
+            VOICE TUNER {playbackRate.toFixed(1)}x
+          </Text>
         </TouchableOpacity>
       </View>
 

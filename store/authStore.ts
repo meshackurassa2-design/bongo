@@ -12,7 +12,7 @@ type AuthStore = {
   signIn: (email: string, password: string) => Promise<string | null>;
   signUp: (email: string, password: string, username: string, displayName: string, role: string) => Promise<string | null>;
   signOut: () => Promise<void>;
-  fetchProfile: (userId: string) => Promise<void>;
+  fetchProfile: (userId?: string) => Promise<void>;
 };
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
@@ -64,10 +64,12 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   },
 
   fetchProfile: async (userId) => {
+    const id = userId || get().session?.user.id;
+    if (!id) return;
     const { data } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', userId)
+      .eq('id', id)
       .single();
     if (data) set({ profile: data as Profile });
   },

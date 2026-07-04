@@ -9,9 +9,10 @@ type Props = {
   isPlaying: boolean;
   onPress: () => void;
   onArtistPress?: () => void;
+  onDelete?: () => void;
 };
 
-export default function TrackItem({ track, isPlaying, onPress, onArtistPress }: Props) {
+export default function TrackItem({ track, isPlaying, onPress, onArtistPress, onDelete }: Props) {
   const formatCount = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}K` : `${n}`;
 
   return (
@@ -45,13 +46,19 @@ export default function TrackItem({ track, isPlaying, onPress, onArtistPress }: 
         </TouchableOpacity>
       </View>
 
-      {/* Stats */}
+      {/* Stats & Actions */}
       <View style={styles.stats}>
         <Text style={styles.stat}>{formatCount(track.play_count)} ▶</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, marginBottom: onDelete ? 4 : 0 }}>
           <Ionicons name="heart" size={10} color={COLORS.textTertiary} />
           <Text style={styles.stat}>{formatCount(track.like_count)}</Text>
         </View>
+        
+        {onDelete && (
+          <TouchableOpacity onPress={onDelete} style={styles.deleteBtn}>
+            <Ionicons name="trash-outline" size={16} color={COLORS.error} />
+          </TouchableOpacity>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -69,6 +76,7 @@ const styles = StyleSheet.create({
   titlePlaying: { color: COLORS.gold },
   artist: { color: COLORS.textSecondary, fontSize: 12, marginTop: 3 },
   genre: { color: COLORS.textTertiary },
-  stats: { alignItems: 'flex-end', gap: 3 },
+  stats: { alignItems: 'flex-end', justifyContent: 'center' },
   stat: { color: COLORS.textTertiary, fontSize: 11 },
+  deleteBtn: { padding: 4, marginTop: 4, backgroundColor: 'rgba(255, 60, 60, 0.1)', borderRadius: 12 },
 });

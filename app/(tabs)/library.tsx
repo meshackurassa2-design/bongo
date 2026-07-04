@@ -17,8 +17,9 @@ export default function LibraryScreen() {
 
   const [likedTracks, setLikedTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(false);
-  const [tab, setTab] = useState<'liked' | 'uploads' | 'downloads'>('liked');
+  const [tab, setTab] = useState<'liked' | 'playlists' | 'uploads' | 'downloads'>('liked');
   const [uploads, setUploads] = useState<Track[]>([]);
+  const [playlists, setPlaylists] = useState<any[]>([]);
   const { downloadedTracks } = useOfflineStore();
 
   useFocusEffect(
@@ -38,11 +39,66 @@ export default function LibraryScreen() {
       } else {
         setLikedTracks([]);
       }
+    } else if (tab === 'playlists') {
+      // Load user's owned playlists and playlists they collaborate on
+      const { data: colabs } = await supabase.from('playlist_collaborators').select('playlist_id').eq('user_id', session!.user.id);
+      const colabIds = colabs?.map(c => c.playlist_id) || [];
+      
+      const { data } = await supabase
+        .from('playlists')
+        .select('*')
+        .or(`user_id.eq.${session!.user.id},id.in.(${colabIds.length ? colabIds.join(',') : '00000000-0000-0000-0000-000000000000'})`)
+        .order('created_at', { ascending: false });
+      if (data) setPlaylists(data);
     } else if (tab === 'uploads') {
       const { data } = await supabase.from('tracks').select('*, profile:profiles!tracks_user_id_fkey(*)').eq('user_id', session!.user.id).order('created_at', { ascending: false });
       if (data) setUploads(data as Track[]);
     }
     setLoading(false);
+  };
+
+  const createPlaylist = async () => {
+    import('react-native').then(({ Alert }) => {
+      Alert.prompt("New Playlist", "Enter a name for your playlist", [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Create", 
+          onPress: async (text) => {
+            if (!text) return;
+            const { error } = await supabase.from('playlists').insert({
+              user_id: session!.user.id,
+              title: text,
+              is_public: true
+            });
+            if (!error) loadLibrary();
+          }
+        }
+      ]);
+    });
+  };
+
+  const handleDeleteTrack = (track: Track) => {
+    import('react-native').then(({ Alert }) => {
+      Alert.alert(
+        "Delete Song",
+        `Are you sure you want to permanently delete "${track.title}"?`,
+        [
+          { text: "Cancel", style: "cancel" },
+          { 
+            text: "Delete", 
+            style: "destructive", 
+            onPress: async () => {
+              const { error } = await supabase.from('tracks').delete().eq('id', track.id);
+              if (error) {
+                Alert.alert("Error", error.message);
+              } else {
+                setUploads(prev => prev.filter(t => t.id !== track.id));
+              }
+            }
+          }
+        ]
+      );
+    });
   };
 
   if (!session) {
@@ -69,52 +125,86 @@ export default function LibraryScreen() {
       <View style={{ marginBottom: 12 }}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>
           <TouchableOpacity style={[styles.tab, tab === 'liked' && styles.tabActive]} onPress={() => setTab('liked')}>
-          <Ionicons name="heart" size={16} color={tab === 'liked' ? COLORS.gold : COLORS.textTertiary} />
-          <Text style={[styles.tabText, tab === 'liked' && styles.tabTextActive]}>Nilizopenda</Text>
-        </TouchableOpacity>
-        {isArtist && (
-          <TouchableOpacity style={[styles.tab, tab === 'uploads' && styles.tabActive]} onPress={() => setTab('uploads')}>
-            <Ionicons name="cloud-upload" size={16} color={tab === 'uploads' ? COLORS.gold : COLORS.textTertiary} />
-            <Text style={[styles.tabText, tab === 'uploads' && styles.tabTextActive]}>Nilichopakia</Text>
+            <Ionicons name="heart" size={16} color={tab === 'liked' ? COLORS.gold : COLORS.textTertiary} />
+            <Text style={[styles.tabText, tab === 'liked' && styles.tabTextActive]}>Nilizopenda</Text>
           </TouchableOpacity>
-        )}
-        <TouchableOpacity style={[styles.tab, tab === 'downloads' && styles.tabActive]} onPress={() => setTab('downloads')}>
-          <Ionicons name="download" size={16} color={tab === 'downloads' ? COLORS.gold : COLORS.textTertiary} />
-          <Text style={[styles.tabText, tab === 'downloads' && styles.tabTextActive]}>Zilizopakuliwa</Text>
-        </TouchableOpacity>
+          <TouchableOpacity style={[styles.tab, tab === 'playlists' && styles.tabActive]} onPress={() => setTab('playlists')}>
+            <Ionicons name="list" size={16} color={tab === 'playlists' ? COLORS.gold : COLORS.textTertiary} />
+            <Text style={[styles.tabText, tab === 'playlists' && styles.tabTextActive]}>Playlists</Text>
+          </TouchableOpacity>
+          {isArtist && (
+            <TouchableOpacity style={[styles.tab, tab === 'uploads' && styles.tabActive]} onPress={() => setTab('uploads')}>
+              <Ionicons name="cloud-upload" size={16} color={tab === 'uploads' ? COLORS.gold : COLORS.textTertiary} />
+              <Text style={[styles.tabText, tab === 'uploads' && styles.tabTextActive]}>Nilichopakia</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={[styles.tab, tab === 'downloads' && styles.tabActive]} onPress={() => setTab('downloads')}>
+            <Ionicons name="download" size={16} color={tab === 'downloads' ? COLORS.gold : COLORS.textTertiary} />
+            <Text style={[styles.tabText, tab === 'downloads' && styles.tabTextActive]}>Zilizopakuliwa</Text>
+          </TouchableOpacity>
         </ScrollView>
       </View>
 
-      {loading
-        ? <ActivityIndicator color={COLORS.gold} style={{ marginTop: 40 }} />
-        : tracks.length === 0
-          ? (
-            <View style={styles.empty}>
-              <Ionicons name={tab === 'liked' ? 'heart-dislike' : tab === 'uploads' ? 'folder-open' : 'cloud-offline'} size={64} color={COLORS.textSecondary} />
-              <Text style={styles.emptyText}>
-                {tab === 'liked' ? 'Bado hujapenda wimbo wowote' : tab === 'uploads' ? 'Bado hujapakia wimbo wowote' : 'Hujapakua nyimbo zozote za kusikiliza nje ya mtandao'}
-              </Text>
-            </View>
-          )
-          : (
-            <FlatList
-              data={tracks}
-              keyExtractor={t => t.id}
-              contentContainerStyle={{ paddingBottom: 160 }}
-              renderItem={({ item }) => (
-                <TrackItem
-                  track={item}
-                  isPlaying={currentTrack?.id === item.id}
-                  onPress={() => {
-                    playTrack(item, tracks);
-                    router.push('/player');
-                  }}
-                  onArtistPress={() => router.push({ pathname: '/artist/[id]', params: { id: item.user_id } })}
-                />
-              )}
+      {loading ? (
+        <ActivityIndicator color={COLORS.gold} style={{ marginTop: 40 }} />
+      ) : tab === 'playlists' ? (
+        <View style={{ flex: 1 }}>
+          <TouchableOpacity style={styles.createPlaylistBtn} onPress={createPlaylist}>
+            <Ionicons name="add-circle" size={24} color={COLORS.gold} />
+            <Text style={styles.createPlaylistText}>Create New Playlist</Text>
+          </TouchableOpacity>
+          <FlatList
+            data={playlists}
+            keyExtractor={p => p.id}
+            contentContainerStyle={{ paddingBottom: 160, paddingHorizontal: 16 }}
+            renderItem={({ item }) => (
+              <TouchableOpacity style={styles.playlistCard} onPress={() => router.push({ pathname: '/playlist/[id]', params: { id: item.id } })}>
+                <View style={styles.playlistIcon}>
+                  <Ionicons name="musical-notes" size={24} color={COLORS.textTertiary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.playlistTitle}>{item.title}</Text>
+                  <Text style={styles.playlistSub}>
+                    {item.user_id === session?.user.id ? 'Owned by you' : 'Collaborative'} • {item.track_count || 0} Tracks
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={COLORS.textTertiary} />
+              </TouchableOpacity>
+            )}
+            ListEmptyComponent={() => (
+              <View style={styles.empty}>
+                <Ionicons name="list" size={64} color={COLORS.textSecondary} />
+                <Text style={styles.emptyText}>You haven't created any playlists yet</Text>
+              </View>
+            )}
+          />
+        </View>
+      ) : tracks.length === 0 ? (
+        <View style={styles.empty}>
+          <Ionicons name={tab === 'liked' ? 'heart-dislike' : tab === 'uploads' ? 'folder-open' : 'cloud-offline'} size={64} color={COLORS.textSecondary} />
+          <Text style={styles.emptyText}>
+            {tab === 'liked' ? 'Bado hujapenda wimbo wowote' : tab === 'uploads' ? 'Bado hujapakia wimbo wowote' : 'Hujapakua nyimbo zozote za kusikiliza nje ya mtandao'}
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={tracks}
+          keyExtractor={t => t.id}
+          contentContainerStyle={{ paddingBottom: 160 }}
+          renderItem={({ item }) => (
+            <TrackItem
+              track={item}
+              isPlaying={currentTrack?.id === item.id}
+              onPress={() => {
+                playTrack(item, tracks);
+                router.push('/player');
+              }}
+              onArtistPress={() => router.push({ pathname: '/artist/[id]', params: { id: item.user_id } })}
+              onDelete={tab === 'uploads' ? () => handleDeleteTrack(item) : undefined}
             />
-          )
-      }
+          )}
+        />
+      )}
     </View>
   );
 }
@@ -134,4 +224,10 @@ const styles = StyleSheet.create({
   noAuthText: { color: COLORS.textSecondary, fontSize: 14 },
   loginBtn: { backgroundColor: COLORS.gold, borderRadius: 12, paddingHorizontal: 32, paddingVertical: 14, marginTop: 8 },
   loginBtnText: { color: COLORS.black, fontWeight: '800', fontSize: 16 },
+  createPlaylistBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(212,175,55,0.1)', marginHorizontal: 16, marginBottom: 16, padding: 12, borderRadius: 12, gap: 12 },
+  createPlaylistText: { color: COLORS.gold, fontSize: 16, fontWeight: '700' },
+  playlistCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, padding: 16, borderRadius: 16, marginBottom: 12, gap: 16 },
+  playlistIcon: { width: 56, height: 56, borderRadius: 12, backgroundColor: COLORS.cardAlt, justifyContent: 'center', alignItems: 'center' },
+  playlistTitle: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '700', marginBottom: 4 },
+  playlistSub: { color: COLORS.textSecondary, fontSize: 13 },
 });

@@ -61,8 +61,8 @@ export default function TabsLayout() {
           name="upload"
           options={{
             title: t('tabs.upload'),
-            href: profile?.role === 'artist' ? '/upload' : null,
-            tabBarIcon: ({ color }) => <TabBarIcon name="cloud-upload" color={color} />,
+            href: ((profile?.role as any) === 'artist' || (profile?.role as any) === 'admin') ? '/upload' : null,
+            tabBarIcon: ({ color }) => <Ionicons name="cloud-upload" size={28} color={color} />,
           }}
         />
         <Tabs.Screen

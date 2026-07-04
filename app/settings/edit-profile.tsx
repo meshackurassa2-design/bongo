@@ -50,6 +50,13 @@ export default function EditProfileSettings() {
       <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={saving}>
         {saving ? <ActivityIndicator color={COLORS.black} /> : <Text style={styles.saveBtnText}>{t('settings.save')}</Text>}
       </TouchableOpacity>
+
+      {profile?.role !== 'artist' && profile?.role !== 'admin' && (
+        <TouchableOpacity style={styles.upgradeBtn} onPress={() => router.push('/settings/become-artist')}>
+          <Ionicons name="star" size={20} color={COLORS.gold} />
+          <Text style={styles.upgradeBtnText}>Upgrade to Artist Account</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -59,5 +66,7 @@ const styles = StyleSheet.create({
   label: { color: COLORS.textSecondary, fontSize: 13, marginBottom: 8, marginTop: 16 },
   input: { backgroundColor: COLORS.card, color: COLORS.textPrimary, borderRadius: 12, padding: 14, fontSize: 15 },
   saveBtn: { backgroundColor: COLORS.gold, padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 32 },
-  saveBtnText: { color: COLORS.black, fontWeight: 'bold', fontSize: 16 }
+  saveBtnText: { color: COLORS.black, fontWeight: 'bold', fontSize: 16 },
+  upgradeBtn: { backgroundColor: 'transparent', padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 12, borderWidth: 1, borderColor: COLORS.gold },
+  upgradeBtnText: { color: COLORS.gold, fontWeight: 'bold', fontSize: 16 }
 });

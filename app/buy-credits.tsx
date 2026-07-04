@@ -75,6 +75,49 @@ export default function BuyCreditsScreen() {
     }
   };
 
+  const handleVerifyPayments = async () => {
+    setIsProcessing(true);
+    try {
+      if (!session?.user.id) return;
+      
+      const { data: pendingTxs, error: fetchError } = await supabase
+        .from('transactions')
+        .select('id')
+        .eq('user_id', session.user.id)
+        .eq('status', 'pending');
+        
+      if (fetchError) throw fetchError;
+      
+      if (!pendingTxs || pendingTxs.length === 0) {
+        Alert.alert("All Good", "You don't have any pending or missing payments to recover.");
+        setIsProcessing(false);
+        return;
+      }
+      
+      let recovered = 0;
+      for (const tx of pendingTxs) {
+        const { data, error } = await supabase.functions.invoke('verify-payment', {
+          body: { transactionId: tx.id }
+        });
+        if (data?.success && data.message.includes('awarded')) {
+          recovered++;
+        }
+      }
+      
+      if (recovered > 0) {
+        if (session.user.id) fetchProfile(session.user.id);
+        Alert.alert("Success!", `We found and recovered ${recovered} missing payment(s)! Your credits have been updated.`);
+      } else {
+        Alert.alert("Status", "We checked your pending payments but none of them have been successfully completed on ClickPesa yet.");
+      }
+      
+    } catch (e: any) {
+      Alert.alert("Error", e.message || "Failed to verify payments");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -94,6 +137,11 @@ export default function BuyCreditsScreen() {
             <Ionicons name="diamond" size={32} color={COLORS.gold} />
             <Text style={styles.balanceTitle}>Current Balance</Text>
             <Text style={styles.balanceAmount}>{profile?.credits || 0} Credits</Text>
+            
+            <TouchableOpacity onPress={handleVerifyPayments} disabled={isProcessing} style={styles.verifyBtn}>
+              <Ionicons name="refresh-outline" size={14} color={COLORS.textSecondary} />
+              <Text style={styles.verifyText}>Verify Missing Payments</Text>
+            </TouchableOpacity>
           </View>
 
           <View style={styles.packageCard}>
@@ -181,4 +229,6 @@ const styles = StyleSheet.create({
   payBtnText: { color: COLORS.black, fontSize: 16, fontWeight: '800' },
   secureWrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 16 },
   secureText: { color: COLORS.textTertiary, fontSize: 12 },
+  verifyBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 16, paddingVertical: 8, paddingHorizontal: 12, backgroundColor: COLORS.background, borderRadius: 20 },
+  verifyText: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '600' }
 });

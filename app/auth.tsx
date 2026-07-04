@@ -36,7 +36,18 @@ export default function AuthScreen() {
 
     let error: string | null;
     if (mode === 'login') {
-      error = await signIn(email.trim(), password);
+      let loginEmail = email.trim();
+      // If it doesn't have an @ symbol, assume it's a username and lookup the email securely
+      if (!loginEmail.includes('@')) {
+        const { data: fetchedEmail, error: rpcError } = await import('../lib/supabase').then(m => m.supabase.rpc('get_user_email', { p_username: loginEmail.toLowerCase() }));
+        if (fetchedEmail) {
+          loginEmail = fetchedEmail;
+        } else {
+          Alert.alert('Kosa', 'Jina la mtumiaji halijapatikana (Username not found)');
+          return;
+        }
+      }
+      error = await signIn(loginEmail, password);
     } else {
       error = await signUp(email.trim(), password, username.trim().toLowerCase(), displayName.trim() || username.trim(), isArtist ? 'artist' : 'fan');
     }
@@ -76,7 +87,7 @@ export default function AuthScreen() {
           </>
         )}
 
-        <Field label="Barua Pepe" value={email} onChange={setEmail} placeholder="mfano@gmail.com" icon="mail-outline" keyboardType="email-address" />
+        <Field label={mode === 'login' ? "Barua Pepe au Jina la Mtumiaji" : "Barua Pepe"} value={email} onChange={setEmail} placeholder={mode === 'login' ? "mfano@gmail.com au @username" : "mfano@gmail.com"} icon={mode === 'login' ? "person-outline" : "mail-outline"} keyboardType={mode === 'login' ? "default" : "email-address"} autoCapitalize="none" />
 
         {/* Password */}
         <Text style={styles.fieldLabel}>Nywila</Text>

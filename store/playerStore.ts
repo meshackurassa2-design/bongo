@@ -13,6 +13,7 @@ type PlayerStore = {
   durationMs: number;
   isShuffled: boolean;
   repeatOne: boolean;
+  playbackRate: number;
   sound: Audio.Sound | null;
   // Actions
   playTrack: (track: Track, queue?: Track[]) => Promise<void>;
@@ -20,6 +21,7 @@ type PlayerStore = {
   skipNext: () => Promise<void>;
   skipPrev: () => Promise<void>;
   seekTo: (ms: number) => Promise<void>;
+  setPlaybackRate: (rate: number) => Promise<void>;
   toggleShuffle: () => void;
   toggleRepeat: () => void;
   cleanup: () => Promise<void>;
@@ -34,6 +36,7 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
   durationMs: 0,
   isShuffled: false,
   repeatOne: false,
+  playbackRate: 1.0,
   sound: null,
 
   playTrack: async (track, queue = [track]) => {
@@ -57,12 +60,18 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     });
 
     const localUri = useOfflineStore.getState().getLocalUri(track.id);
-    const audioSource = localUri ? { uri: localUri } : { uri: track.audio_url };
+    const isExtensionless = track.audio_url ? !track.audio_url.match(/\.(mp3|m4a|wav|ogg|aac|flac)(\?|$)/i) : false;
+    const audioSource = localUri 
+      ? { uri: localUri }
+      : { 
+          uri: track.audio_url,
+          ...(isExtensionless ? { overrideFileExtensionAndroid: 'mp3', headers: { 'Accept': 'audio/mpeg, audio/*, */*' } } : {})
+        };
 
     try {
       const { sound, status } = await Audio.Sound.createAsync(
         audioSource,
-        { shouldPlay: true, progressUpdateIntervalMillis: 500 },
+        { shouldPlay: true, progressUpdateIntervalMillis: 500, rate: get().playbackRate, shouldCorrectPitch: false },
         (status: AVPlaybackStatus) => {
           if (status.isLoaded) {
             const currentTrack = get().currentTrack as any;
@@ -154,7 +163,21 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
   seekTo: async (ms: number) => {
     const { sound } = get();
     if (!sound) return;
-    await sound.setPositionAsync(ms);
+    try {
+      await sound.setPositionAsync(ms);
+    } catch(e) {}
+  },
+
+  setPlaybackRate: async (rate: number) => {
+    set({ playbackRate: rate });
+    const { sound } = get();
+    if (sound) {
+      try {
+        await sound.setRateAsync(rate, false);
+      } catch (e) {
+        console.log("Failed to set rate:", e);
+      }
+    }
   },
 
   toggleShuffle: () => set(s => ({ isShuffled: !s.isShuffled })),
