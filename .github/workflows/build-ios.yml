@@ -38,7 +38,7 @@ jobs:
       - name: Build unsigned IPA
         run: |
           cd ios
-          xcodebuild archive \
+          xcodebuild build \
             -workspace BongoStream.xcworkspace \
             -scheme BongoStream \
             -configuration Release \
@@ -46,7 +46,8 @@ jobs:
             -derivedDataPath derived_data \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY=""
+            CODE_SIGN_IDENTITY="" \
+            ENTITLEMENTS_REQUIRED=NO
 
       - name: Package IPA
         run: |
