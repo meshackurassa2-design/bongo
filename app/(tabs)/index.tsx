@@ -10,6 +10,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { COLORS, GENRES, Track, Profile, Playlist } from '../../constants';
 import { usePlayerStore } from '../../store/playerStore';
+import { useAuthStore } from '../../store/authStore';
 import { useTranslation } from 'react-i18next';
 import TrackItem from '../../components/TrackItem';
 import { getGreeting } from '../../utils/helpers';
@@ -21,11 +22,13 @@ export default function HomeScreen() {
   const { t } = useTranslation();
   const playTrack = usePlayerStore(s => s.playTrack);
   const currentTrack = usePlayerStore(s => s.currentTrack);
+  const session = useAuthStore(s => s.session);
 
   const [trending, setTrending] = useState<Track[]>([]);
   const [newReleases, setNewReleases] = useState<Track[]>([]);
   const [artists, setArtists] = useState<Profile[]>([]);
   const [albums, setAlbums] = useState<Playlist[]>([]);
+  const [myPlaylists, setMyPlaylists] = useState<Playlist[]>([]);
   const [loading, setLoading] = useState(true);
 
   useFocusEffect(
@@ -36,17 +39,51 @@ export default function HomeScreen() {
 
   const loadData = async () => {
     setLoading(true);
-    const [trendRes, newRes, artistsRes, albumsRes] = await Promise.all([
+    const [trendRes, newRes, artistsRes, albumsRes, myPlaylistsRes] = await Promise.all([
       supabase.from('tracks').select('*, profile:profiles!tracks_user_id_fkey(*)').eq('is_public', true).order('play_count', { ascending: false }).limit(10),
       supabase.from('tracks').select('*, profile:profiles!tracks_user_id_fkey(*)').eq('is_public', true).order('created_at', { ascending: false }).limit(10),
       supabase.from('profiles').select('*').eq('role', 'artist').order('follower_count', { ascending: false }).limit(10),
       supabase.from('playlists').select('id, title, cover_url, track_count').eq('is_public', true).order('track_count', { ascending: false }).limit(10),
+      session?.user.id ? supabase.from('playlists').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false }).limit(10) : Promise.resolve({ data: null })
     ]);
     if (trendRes.data) setTrending(trendRes.data as Track[]);
     if (newRes.data) setNewReleases(newRes.data as Track[]);
     if (artistsRes.data) setArtists(artistsRes.data as Profile[]);
     if (albumsRes.data) setAlbums(albumsRes.data as Playlist[]);
+    if (myPlaylistsRes.data) setMyPlaylists(myPlaylistsRes.data as Playlist[]);
     setLoading(false);
+  };
+
+  const createPlaylist = async () => {
+    if (!session) {
+      // @ts-ignore - Alert works on React Native
+      import('react-native').then(({ Alert }) => {
+        Alert.alert("Login Required", "You must be logged in to create a playlist");
+      });
+      return;
+    }
+    import('react-native').then(({ Alert }) => {
+      Alert.prompt("New Playlist", "Enter a name for your playlist", [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Create", 
+          onPress: async (text) => {
+            if (text) {
+              const { error } = await supabase.from('playlists').insert({
+                title: text,
+                user_id: session.user.id,
+                is_public: true
+              });
+              if (error) Alert.alert("Error", error.message);
+              else {
+                Alert.alert("Success", "Playlist created!");
+                loadData();
+              }
+            }
+          } 
+        }
+      ]);
+    });
   };
 
   if (loading) {
@@ -128,6 +165,38 @@ export default function HomeScreen() {
           </TouchableOpacity>
         ))}
       </ScrollView>
+
+      {/* My Playlists (If logged in) */}
+      {session && (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>My Playlists</Text>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScroll}>
+            {/* Create Playlist Button */}
+            <TouchableOpacity style={styles.createPlaylistCard} onPress={createPlaylist}>
+              <View style={styles.createPlaylistIcon}>
+                <Ionicons name="add" size={32} color={COLORS.gold} />
+              </View>
+              <Text style={styles.albumTitle}>Create New</Text>
+            </TouchableOpacity>
+            
+            {myPlaylists.map(playlist => (
+              <TouchableOpacity key={playlist.id} style={styles.albumCard} onPress={() => router.push({ pathname: '/playlist/[id]', params: { id: playlist.id } })}>
+                {playlist.cover_url ? (
+                  <Image source={{ uri: playlist.cover_url }} style={styles.albumImage} transition={200} cachePolicy="memory-disk" />
+                ) : (
+                  <View style={[styles.albumImage, { justifyContent: 'center', alignItems: 'center' }]}>
+                    <Ionicons name="list" size={40} color={COLORS.textTertiary} />
+                  </View>
+                )}
+                <Text style={styles.albumTitle} numberOfLines={1}>{playlist.title}</Text>
+                <Text style={styles.albumSubtitle}>{playlist.track_count || 0} Tracks</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       {/* Trending Songs */}
       {trending.length > 0 && (
@@ -264,10 +333,13 @@ const styles = StyleSheet.create({
   artistImage: { width: 80, height: 80, borderRadius: 40, marginBottom: 8 },
   artistName: { color: COLORS.textPrimary, fontSize: 12, fontWeight: '600', textAlign: 'center' },
   
-  albumCard: { width: 160 },
-  albumImage: { width: 160, height: 160, borderRadius: 8, backgroundColor: COLORS.cardAlt, marginBottom: 8 },
+  albumCard: { width: 140 },
+  albumImage: { width: 140, height: 140, borderRadius: 12, backgroundColor: COLORS.cardAlt, marginBottom: 8 },
   albumTitle: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '700' },
   albumSubtitle: { color: COLORS.textTertiary, fontSize: 12, marginTop: 2 },
+  
+  createPlaylistCard: { width: 100, marginRight: 8 },
+  createPlaylistIcon: { width: 100, height: 100, borderRadius: 12, backgroundColor: 'rgba(212,175,55,0.1)', borderWidth: 1, borderColor: 'rgba(212,175,55,0.3)', borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
   
   empty: { alignItems: 'center', paddingVertical: 60 },
   emptyTitle: { color: COLORS.textPrimary, fontSize: 20, fontWeight: '700', marginBottom: 8 },
