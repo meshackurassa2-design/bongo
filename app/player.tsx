@@ -134,7 +134,17 @@ export default function PlayerScreen() {
       <View style={styles.infoRow}>
         <View style={styles.infoWrap}>
           <Text style={styles.title} numberOfLines={2}>{currentTrack.title}</Text>
-          <Text style={styles.artist} numberOfLines={1}>{currentTrack.artist_name}</Text>
+          <TouchableOpacity onPress={() => {
+            router.back();
+            setTimeout(() => router.push(`/artist/${currentTrack.user_id}`), 100);
+          }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={styles.artist} numberOfLines={1}>{currentTrack.artist_name}</Text>
+              {currentTrack.profile?.is_verified && (
+                <Ionicons name="checkmark-circle" size={14} color={COLORS.gold} style={{ marginLeft: 4 }} />
+              )}
+            </View>
+          </TouchableOpacity>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <TouchableOpacity style={styles.downloadBtn} onPress={handleShare}>
