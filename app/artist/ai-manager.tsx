@@ -246,7 +246,7 @@ You are their trusted advisor, their manager, their biggest supporter. Help them
             onPress={() => sendMessage(item.prompt)}
             disabled={loading}
           >
-            <Text style={styles.chipText}>{item.label}</Text>
+            <Text style={styles.chipText} numberOfLines={1}>{item.label}</Text>
           </TouchableOpacity>
         )}
         style={styles.chipsRow}
@@ -321,10 +321,10 @@ const styles = StyleSheet.create({
   freeText: { color: COLORS.gold, fontSize: 11, fontWeight: '900', letterSpacing: 1 },
 
   // Chips
-  chipsRow: { maxHeight: 48, flexGrow: 0 },
-  chipsContainer: { paddingHorizontal: 12, paddingVertical: 8, gap: 8 },
-  chip: { paddingHorizontal: 14, paddingVertical: 8, backgroundColor: 'rgba(212, 175, 55, 0.1)', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(212, 175, 55, 0.3)' },
-  chipText: { color: COLORS.gold, fontSize: 13, fontWeight: '600' },
+  chipsRow: { maxHeight: 52, flexGrow: 0 },
+  chipsContainer: { paddingHorizontal: 12, paddingVertical: 6, gap: 8 },
+  chip: { paddingHorizontal: 12, paddingVertical: 9, backgroundColor: 'rgba(212, 175, 55, 0.1)', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(212, 175, 55, 0.3)', flexShrink: 0 },
+  chipText: { color: COLORS.gold, fontSize: 12, fontWeight: '600', includeFontPadding: false },
 
   // Messages
   messagesList: { padding: 16, gap: 12, paddingBottom: 12 },
