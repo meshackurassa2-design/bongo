@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ActivityIndicator, Modal, Alert } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ActivityIndicator, Modal, Alert, Animated, Easing } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -41,6 +41,33 @@ export default function PlayerScreen() {
   const [showFxModal, setShowFxModal] = useState(false);
   const [timeLeft, setTimeLeft] = useState<string | null>(null);
   const [isSharing, setIsSharing] = useState(false);
+
+  // Animation values
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (isPlaying) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(scaleAnim, { toValue: 1.05, duration: 2000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+          Animated.timing(scaleAnim, { toValue: 1, duration: 2000, easing: Easing.inOut(Easing.ease), useNativeDriver: true })
+        ])
+      ).start();
+
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, { toValue: 1.15, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true })
+        ])
+      ).start();
+    } else {
+      scaleAnim.stopAnimation();
+      pulseAnim.stopAnimation();
+      Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }).start();
+      Animated.spring(pulseAnim, { toValue: 1, useNativeDriver: true }).start();
+    }
+  }, [isPlaying]);
 
   const handleShare = async () => {
     if (!currentTrack) return;
@@ -134,13 +161,18 @@ export default function PlayerScreen() {
 
       {/* Cover Art */}
       <View style={styles.coverWrap}>
-        {currentTrack.cover_url ? (
-          <Image source={{ uri: currentTrack.cover_url }} style={styles.cover} transition={300} cachePolicy="memory-disk" />
-        ) : (
-          <View style={[styles.cover, styles.coverFallback]}>
-            <Ionicons name="musical-notes" size={80} color={COLORS.textTertiary} />
-          </View>
+        {isPlaying && (
+          <Animated.View style={[styles.pulseCircle, { transform: [{ scale: pulseAnim }], opacity: pulseAnim.interpolate({ inputRange: [1, 1.15], outputRange: [0.6, 0] }) }]} />
         )}
+        <Animated.View style={{ transform: [{ scale: scaleAnim }], width: '100%', height: '100%', borderRadius: 24, elevation: 20, shadowColor: COLORS.gold, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20 }}>
+          {currentTrack.cover_url ? (
+            <Image source={{ uri: currentTrack.cover_url }} style={styles.cover} transition={300} cachePolicy="memory-disk" />
+          ) : (
+            <View style={[styles.cover, styles.coverFallback]}>
+              <Ionicons name="musical-notes" size={80} color={COLORS.textTertiary} />
+            </View>
+          )}
+        </Animated.View>
       </View>
 
       {/* Info & Actions */}
@@ -338,8 +370,9 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: 16, marginBottom: 20 },
   iconBtn: { padding: 8, width: 56, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1, marginTop: 14 },
-  coverWrap: { alignItems: 'center', marginBottom: 24 },
-  cover: { width: width - 80, height: width - 80, borderRadius: 20, backgroundColor: COLORS.cardAlt, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.5, shadowRadius: 20 },
+  coverWrap: { alignItems: 'center', marginBottom: 24, position: 'relative', width: width - 80, alignSelf: 'center' },
+  pulseCircle: { position: 'absolute', width: width - 80, height: width - 80, borderRadius: 1000, backgroundColor: COLORS.gold, top: 0, left: 0 },
+  cover: { width: width - 80, height: width - 80, borderRadius: 24, backgroundColor: COLORS.cardAlt, overflow: 'hidden' },
   coverFallback: { justifyContent: 'center', alignItems: 'center' },
   closeBtn: { marginTop: 50, marginLeft: 20 },
   infoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 32, marginBottom: 16 },
