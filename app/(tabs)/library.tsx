@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView, Alert, Modal, TextInput, Switch, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { supabase } from '../../lib/supabase';
@@ -20,6 +20,10 @@ export default function LibraryScreen() {
   const [tab, setTab] = useState<'liked' | 'playlists' | 'uploads' | 'downloads'>('liked');
   const [uploads, setUploads] = useState<Track[]>([]);
   const [playlists, setPlaylists] = useState<any[]>([]);
+  
+  const [createModalVisible, setCreateModalVisible] = useState(false);
+  const [newPlaylistTitle, setNewPlaylistTitle] = useState('');
+  const [newPlaylistIsPublic, setNewPlaylistIsPublic] = useState(true);
   const { downloadedTracks } = useOfflineStore();
 
   useFocusEffect(
@@ -57,24 +61,31 @@ export default function LibraryScreen() {
     setLoading(false);
   };
 
-  const createPlaylist = async () => {
-    import('react-native').then(({ Alert }) => {
-      Alert.prompt("New Playlist", "Enter a name for your playlist", [
-        { text: "Cancel", style: "cancel" },
-        { 
-          text: "Create", 
-          onPress: async (text) => {
-            if (!text) return;
-            const { error } = await supabase.from('playlists').insert({
-              user_id: session!.user.id,
-              title: text,
-              is_public: true
-            });
-            if (!error) loadLibrary();
-          }
-        }
-      ]);
+  const openCreatePlaylist = () => {
+    setNewPlaylistTitle('');
+    setNewPlaylistIsPublic(true);
+    setCreateModalVisible(true);
+  };
+
+  const handleCreatePlaylist = async () => {
+    if (!newPlaylistTitle.trim()) {
+      Alert.alert("Required", "Please enter a name for your playlist");
+      return;
+    }
+    
+    setCreateModalVisible(false);
+    
+    const { error } = await supabase.from('playlists').insert({
+      user_id: session!.user.id,
+      title: newPlaylistTitle.trim(),
+      is_public: newPlaylistIsPublic
     });
+    
+    if (error) {
+      Alert.alert("Error", error.message);
+    } else {
+      loadLibrary();
+    }
   };
 
   const handleDeleteTrack = (track: Track) => {
@@ -149,7 +160,7 @@ export default function LibraryScreen() {
         <ActivityIndicator color={COLORS.gold} style={{ marginTop: 40 }} />
       ) : tab === 'playlists' ? (
         <View style={{ flex: 1 }}>
-          <TouchableOpacity style={styles.createPlaylistBtn} onPress={createPlaylist}>
+          <TouchableOpacity style={styles.createPlaylistBtn} onPress={openCreatePlaylist}>
             <Ionicons name="add-circle" size={24} color={COLORS.gold} />
             <Text style={styles.createPlaylistText}>Create New Playlist</Text>
           </TouchableOpacity>
@@ -165,7 +176,7 @@ export default function LibraryScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.playlistTitle}>{item.title}</Text>
                   <Text style={styles.playlistSub}>
-                    {item.user_id === session?.user.id ? 'Owned by you' : 'Collaborative'} • {item.track_count || 0} Tracks
+                    {item.is_public ? 'Public 🌍' : 'Private 🔒'} • {item.user_id === session?.user.id ? 'Owned by you' : 'Collaborative'} • {item.track_count || 0} Tracks
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={COLORS.textTertiary} />
@@ -205,6 +216,48 @@ export default function LibraryScreen() {
           )}
         />
       )}
+      
+      {/* Create Playlist Modal */}
+      <Modal visible={createModalVisible} transparent animationType="slide" onRequestClose={() => setCreateModalVisible(false)}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>New Playlist</Text>
+              <TouchableOpacity onPress={() => setCreateModalVisible(false)}>
+                <Ionicons name="close" size={24} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            
+            <TextInput 
+              style={styles.modalInput}
+              placeholder="Playlist Name"
+              placeholderTextColor={COLORS.textTertiary}
+              value={newPlaylistTitle}
+              onChangeText={setNewPlaylistTitle}
+              autoFocus
+            />
+            
+            <View style={styles.privacyRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.privacyLabel}>Public Playlist</Text>
+                <Text style={styles.privacySub}>
+                  {newPlaylistIsPublic ? 'Anyone can find and listen to this playlist.' : 'Only you and invited collaborators can view.'}
+                </Text>
+              </View>
+              <Switch 
+                value={newPlaylistIsPublic} 
+                onValueChange={setNewPlaylistIsPublic}
+                trackColor={{ false: COLORS.divider, true: COLORS.gold + '80' }}
+                thumbColor={newPlaylistIsPublic ? COLORS.gold : COLORS.textSecondary}
+              />
+            </View>
+            
+            <TouchableOpacity style={styles.modalBtn} onPress={handleCreatePlaylist}>
+              <Text style={styles.modalBtnText}>Create Playlist</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -230,4 +283,15 @@ const styles = StyleSheet.create({
   playlistIcon: { width: 56, height: 56, borderRadius: 12, backgroundColor: COLORS.cardAlt, justifyContent: 'center', alignItems: 'center' },
   playlistTitle: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '700', marginBottom: 4 },
   playlistSub: { color: COLORS.textSecondary, fontSize: 13 },
+  
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: COLORS.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: Platform.OS === 'ios' ? 40 : 24 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalTitle: { color: COLORS.textPrimary, fontSize: 20, fontWeight: '800' },
+  modalInput: { backgroundColor: COLORS.black, color: COLORS.textPrimary, borderRadius: 12, padding: 16, fontSize: 16, borderWidth: 1, borderColor: COLORS.divider, marginBottom: 20 },
+  privacyRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.cardAlt, padding: 16, borderRadius: 12, marginBottom: 24 },
+  privacyLabel: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '600', marginBottom: 4 },
+  privacySub: { color: COLORS.textSecondary, fontSize: 12 },
+  modalBtn: { backgroundColor: COLORS.gold, padding: 16, borderRadius: 12, alignItems: 'center' },
+  modalBtnText: { color: COLORS.black, fontSize: 16, fontWeight: '700' },
 });
