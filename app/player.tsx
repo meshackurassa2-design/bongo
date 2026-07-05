@@ -46,23 +46,36 @@ export default function PlayerScreen() {
     if (!currentTrack) return;
     setIsSharing(true);
     try {
-      const localUri = FileSystem.cacheDirectory + `${currentTrack.id}.mp3`;
-      const fileInfo = await FileSystem.getInfoAsync(localUri);
-      
-      if (!fileInfo.exists) {
-        await FileSystem.downloadAsync(currentTrack.audio_url, localUri);
-      }
-      
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(localUri, {
-          dialogTitle: `Share ${currentTrack.title}`,
-          mimeType: 'audio/mpeg',
-        });
+      if (currentTrack.is_ai) {
+        // AI songs: share the actual audio file so anyone can listen without the app
+        const localUri = FileSystem.cacheDirectory + `${currentTrack.id}.mp3`;
+        const fileInfo = await FileSystem.getInfoAsync(localUri);
+        if (!fileInfo.exists) {
+          await FileSystem.downloadAsync(currentTrack.audio_url, localUri);
+        }
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(localUri, {
+            dialogTitle: `Share AI Song: ${currentTrack.title}`,
+            mimeType: 'audio/mpeg',
+          });
+        } else {
+          Alert.alert('Error', 'Sharing is not available on this device.');
+        }
       } else {
-        Alert.alert("Error", "Sharing is not available on this device.");
+        // Regular songs: share a deep link that opens the song inside Bongo Stream
+        const shareLink = `https://bongostream.app/song/${currentTrack.id}`;
+        const shareMessage = `🎵 Sikiliza "${currentTrack.title}" na ${currentTrack.artist_name} kwenye Bongo Stream!\n\n${shareLink}`;
+        if (await Sharing.isAvailableAsync()) {
+          // Use expo-sharing with a text file trick, or use the built-in Share API
+          const { Share } = require('react-native');
+          await Share.share({
+            message: shareMessage,
+            title: currentTrack.title,
+          });
+        }
       }
     } catch (e: any) {
-      Alert.alert("Share Error", e.message);
+      Alert.alert('Share Error', e.message);
     } finally {
       setIsSharing(false);
     }

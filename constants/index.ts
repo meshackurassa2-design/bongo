@@ -40,6 +40,7 @@ export type Track = {
   like_count: number;
   description: string | null;
   is_public: boolean;
+  is_ai?: boolean;
   created_at: string;
   profile?: Profile;
 };
