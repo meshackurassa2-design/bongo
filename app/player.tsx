@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ActivityIndicator, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ActivityIndicator, Modal, Alert } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import Slider from '@react-native-community/slider';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 import { usePlayerStore } from '../store/playerStore';
 import { useOfflineStore } from '../store/offlineStore';
 import { COLORS } from '../constants';
@@ -33,9 +35,38 @@ export default function PlayerScreen() {
     clearSleepTimer,
   } = usePlayerStore();
 
+  const { downloadTrack, isDownloaded, isDownloading, downloadProgress } = useOfflineStore();
+
   const [showSleepTimer, setShowSleepTimer] = useState(false);
   const [showFxModal, setShowFxModal] = useState(false);
   const [timeLeft, setTimeLeft] = useState<string | null>(null);
+  const [isSharing, setIsSharing] = useState(false);
+
+  const handleShare = async () => {
+    if (!currentTrack) return;
+    setIsSharing(true);
+    try {
+      const localUri = FileSystem.cacheDirectory + `${currentTrack.id}.mp3`;
+      const fileInfo = await FileSystem.getInfoAsync(localUri);
+      
+      if (!fileInfo.exists) {
+        await FileSystem.downloadAsync(currentTrack.audio_url, localUri);
+      }
+      
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(localUri, {
+          dialogTitle: `Share ${currentTrack.title}`,
+          mimeType: 'audio/mpeg',
+        });
+      } else {
+        Alert.alert("Error", "Sharing is not available on this device.");
+      }
+    } catch (e: any) {
+      Alert.alert("Share Error", e.message);
+    } finally {
+      setIsSharing(false);
+    }
+  };
 
   useEffect(() => {
     if (!sleepTimerMs) {
@@ -106,25 +137,30 @@ export default function PlayerScreen() {
           <Text style={styles.title} numberOfLines={2}>{currentTrack.title}</Text>
           <Text style={styles.artist} numberOfLines={1}>{currentTrack.artist_name}</Text>
         </View>
-        <TouchableOpacity 
-          style={styles.downloadBtn} 
-          onPress={() => !isDownloaded(currentTrack.id) && !isDownloading[currentTrack.id] && downloadTrack(currentTrack)}
-        >
-          {isDownloading[currentTrack.id] ? (
-            <View style={{ alignItems: 'center' }}>
-              <ActivityIndicator size="small" color={COLORS.gold} />
-              <Text style={{ color: COLORS.gold, fontSize: 10, marginTop: 4, fontWeight: '700' }}>
-                {Math.round((downloadProgress[currentTrack.id] || 0) * 100)}%
-              </Text>
-            </View>
-          ) : (
-            <Ionicons 
-              name={isDownloaded(currentTrack.id) ? "checkmark-circle" : "cloud-download-outline"} 
-              size={28} 
-              color={isDownloaded(currentTrack.id) ? COLORS.gold : COLORS.textSecondary} 
-            />
-          )}
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <TouchableOpacity style={styles.downloadBtn} onPress={handleShare}>
+            {isSharing ? <ActivityIndicator size="small" color={COLORS.textPrimary} /> : <Ionicons name="share-social-outline" size={26} color={COLORS.textSecondary} />}
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.downloadBtn} 
+            onPress={() => !isDownloaded(currentTrack.id) && !isDownloading[currentTrack.id] && downloadTrack(currentTrack)}
+          >
+            {isDownloading[currentTrack.id] ? (
+              <View style={{ alignItems: 'center' }}>
+                <ActivityIndicator size="small" color={COLORS.gold} />
+                <Text style={{ color: COLORS.gold, fontSize: 10, marginTop: 4, fontWeight: '700' }}>
+                  {Math.round((downloadProgress[currentTrack.id] || 0) * 100)}%
+                </Text>
+              </View>
+            ) : (
+              <Ionicons 
+                name={isDownloaded(currentTrack.id) ? "checkmark-circle" : "cloud-download-outline"} 
+                size={28} 
+                color={isDownloaded(currentTrack.id) ? COLORS.gold : COLORS.textSecondary} 
+              />
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 16 }}>
