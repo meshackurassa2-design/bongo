@@ -47,7 +47,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={styles.root}>
       <ThemeProvider value={customTheme}>
         <StatusBar style="light" backgroundColor="#0A0A0F" />
-        <Stack screenOptions={{ headerShown: false, headerBackTitleVisible: false, contentStyle: { backgroundColor: '#0A0A0F' }, animation: 'fade' }}>
+        <Stack screenOptions={{ headerShown: false, headerBackTitleVisible: false, headerBackTitle: '', contentStyle: { backgroundColor: '#0A0A0F' }, animation: 'fade' }}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="auth" />
           <Stack.Screen name="track/[id]" options={{ presentation: 'modal' }} />
