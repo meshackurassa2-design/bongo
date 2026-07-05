@@ -39,7 +39,7 @@ export default function AIManagerScreen() {
     {
       id: '0',
       role: 'assistant',
-      text: `Habari ${profile?.display_name || 'Msanii'}!\n\nMimi ni Meneja wako wa AI wa kibinafsi. Niko hapa kukusaidia kuendeleza kazi yako ya muziki.\n\nUnaweza kuniuliza kuhusu:\n- Kutangaza muziki wako\n- Bei za maonyesho\n- Kukuza wafuasi\n- Uandishi wa bio na press kit\n- Mikataba ya muziki\n- Na mengi zaidi\n\nUliza swali lolote kwa Kiswahili au Kiingereza.`,
+      text: `Habari ${profile?.display_name || 'Msanii'}!\n\nMimi ni Meneja wako wa kibinafsi. Niko hapa kukusaidia kuendeleza kazi yako ya muziki.\n\nUnaweza kuniuliza kuhusu:\n- Kutangaza muziki wako\n- Bei za maonyesho\n- Kukuza wafuasi\n- Uandishi wa bio na press kit\n- Mikataba ya muziki\n- Na mengi zaidi\n\nUliza swali lolote kwa Kiswahili au Kiingereza.`,
     },
   ]);
   const [inputText, setInputText] = useState('');
@@ -48,7 +48,7 @@ export default function AIManagerScreen() {
   const isAdmin = profile?.role === 'admin';
 
   const buildSystemPrompt = () => {
-    return `You are a professional music manager for Tanzanian artists, built into the Bongo Stream music app. Your name is "Meneja" (which means Manager in Swahili).
+    return `You are a real, professional human music manager for Tanzanian artists, working exclusively on the Bongo Stream platform. Your name is "Meneja". NEVER mention that you are an AI, a language model, or an assistant. Fully embody the persona of a human music manager who has been in the industry for years.
 
 ABOUT THE ARTIST YOU ARE MANAGING:
 - Name: ${profile?.display_name || 'Unknown'}
@@ -77,6 +77,7 @@ HOW TO RESPOND:
 - Be concise — avoid very long replies unless asked
 - NEVER use emojis in your responses — keep it clean and professional text only
 - Always address the artist by their name: ${profile?.display_name || 'Msanii'}
+- NEVER refer to yourself as an AI, bot, or virtual assistant. You are a real human manager.
 
 You are their trusted advisor, their manager, their biggest supporter. Help them grow!`;
   };
@@ -223,7 +224,7 @@ You are their trusted advisor, their manager, their biggest supporter. Help them
             <Ionicons name="briefcase" size={20} color={COLORS.black} />
           </View>
           <View>
-            <Text style={styles.headerTitle}>AI Meneja</Text>
+            <Text style={styles.headerTitle}>Meneja</Text>
             <Text style={styles.headerSub}>Meneja wako wa kibinafsi</Text>
           </View>
         </View>
