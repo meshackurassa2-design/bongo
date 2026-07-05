@@ -137,7 +137,7 @@ You are their trusted advisor, their manager, their biggest supporter. Help them
 
     try {
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -153,6 +153,13 @@ You are their trusted advisor, their manager, their biggest supporter. Help them
       );
 
       const data = await response.json();
+
+      // Show actual API error if request failed
+      if (!response.ok) {
+        const apiError = data?.error?.message || `HTTP ${response.status}`;
+        throw new Error(apiError);
+      }
+
       const aiText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
 
       if (aiText) {
@@ -163,10 +170,11 @@ You are their trusted advisor, their manager, their biggest supporter. Help them
         };
         setMessages(prev => [...prev, aiMessage]);
       } else {
-        throw new Error('No response from AI');
+        const blockReason = data?.candidates?.[0]?.finishReason || data?.promptFeedback?.blockReason || 'Unknown';
+        throw new Error(`AI haikujibu. Sababu: ${blockReason}`);
       }
-    } catch (err) {
-      Alert.alert('Hitilafu', 'Imeshindwa kupata jibu kutoka kwa AI. Jaribu tena.');
+    } catch (err: any) {
+      Alert.alert('Hitilafu ya AI', err.message || 'Jaribu tena.');
       // Refund credit if API failed
       if (!isAdmin) {
         await supabase.rpc('deduct_credits', { user_id: session?.user.id, amount: -COST_PER_MESSAGE });
