@@ -80,7 +80,10 @@ export default function ProfileScreen() {
           </>
         )}
         {(profile.role === 'artist' || profile.role === 'admin') && (
-          <MenuRow icon="stats-chart" label="Artist Analytics Dashboard" iconColor={COLORS.gold} onPress={() => router.push('/artist/dashboard')} />
+          <>
+            <MenuRow icon="stats-chart" label="Artist Analytics Dashboard" iconColor={COLORS.gold} onPress={() => router.push('/artist/dashboard')} />
+            <MenuRow icon="checkmark-circle" label="Get Verified" iconColor={COLORS.gold} onPress={() => router.push('/settings/verify')} />
+          </>
         )}
         {profile.role !== 'artist' && profile.role !== 'admin' && (
           <MenuRow icon="star" label="Become an Artist" iconColor={COLORS.gold} onPress={() => router.push('/settings/become-artist')} />
