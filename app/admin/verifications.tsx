@@ -71,6 +71,13 @@ export default function AdminVerificationsScreen() {
             if (error) {
               Alert.alert('Error', error.message);
             } else {
+              // Automatically update their profile if approved
+              if (newStatus === 'approved') {
+                const req = requests.find(r => r.id === requestId);
+                if (req) {
+                  await supabase.from('profiles').update({ is_verified: true }).eq('id', req.user_id);
+                }
+              }
               setRequests(prev => prev.filter(req => req.id !== requestId));
             }
           }
