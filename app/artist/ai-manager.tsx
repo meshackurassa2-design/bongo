@@ -200,10 +200,10 @@ Hustle hard for your artist. Make them money!`;
   const handlePostAction = async (platform: string, content: string) => {
     try {
       if (platform.toLowerCase() === 'twitter') {
-        const url = \`https://twitter.com/intent/tweet?text=\${encodeURIComponent(content)}\`;
+        const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(content)}`;
         await Linking.openURL(url);
       } else if (platform.toLowerCase() === 'whatsapp') {
-        const url = \`whatsapp://send?text=\${encodeURIComponent(content)}\`;
+        const url = `whatsapp://send?text=${encodeURIComponent(content)}`;
         const canOpen = await Linking.canOpenURL(url);
         if (canOpen) {
           await Linking.openURL(url);
