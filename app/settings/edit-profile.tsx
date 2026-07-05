@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import { useAuthStore } from '../../store/authStore';
 import { COLORS } from '../../constants';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from 'react-i18next';
+import * as ImagePicker from 'expo-image-picker';
+import { decode } from 'base64-arraybuffer';
+import { Image } from 'expo-image';
 
 export default function EditProfileSettings() {
   const profile = useAuthStore(s => s.profile);
@@ -14,7 +18,36 @@ export default function EditProfileSettings() {
   const [displayName, setDisplayName] = useState(profile?.display_name || '');
   const [bio, setBio] = useState(profile?.bio || '');
   const [location, setLocation] = useState(profile?.location || '');
+  const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || '');
   const [saving, setSaving] = useState(false);
+
+  const handlePickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.5,
+      base64: true,
+    });
+
+    if (!result.canceled && result.assets[0].base64) {
+      setSaving(true);
+      try {
+        const filePath = `avatars/${profile?.id}_${Date.now()}.jpg`;
+        const { error: uploadError } = await supabase.storage.from('images').upload(filePath, decode(result.assets[0].base64), { contentType: 'image/jpeg' });
+        
+        if (uploadError) throw uploadError;
+
+        const { data: publicUrlData } = supabase.storage.from('images').getPublicUrl(filePath);
+        setAvatarUrl(publicUrlData.publicUrl);
+        Alert.alert("Success", "Profile picture uploaded successfully!");
+      } catch (e: any) {
+        Alert.alert("Upload Error", e.message);
+      } finally {
+        setSaving(false);
+      }
+    }
+  };
 
   const handleSave = async () => {
     if (!profile) return;
@@ -22,7 +55,8 @@ export default function EditProfileSettings() {
     const { error } = await supabase.from('profiles').update({
       display_name: displayName,
       bio,
-      location
+      location,
+      avatar_url: avatarUrl
     }).eq('id', profile.id);
     
     setSaving(false);
@@ -35,9 +69,23 @@ export default function EditProfileSettings() {
   };
 
   return (
-    <View style={styles.container}>
-      <Stack.Screen options={{ title: t('profile.edit_profile'), headerShown: true, headerStyle: { backgroundColor: COLORS.black }, headerTintColor: COLORS.gold }} />
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 100 }}>
+      <Stack.Screen options={{ title: t('profile.edit_profile'), headerShown: true, headerStyle: { backgroundColor: COLORS.black }, headerTintColor: COLORS.gold, headerBackTitleVisible: false }} />
       
+      <View style={{ alignItems: 'center', marginVertical: 20 }}>
+        <TouchableOpacity onPress={handlePickImage} disabled={saving}>
+          {avatarUrl ? (
+            <Image source={{ uri: avatarUrl }} style={{ width: 100, height: 100, borderRadius: 50 }} />
+          ) : (
+            <View style={{ width: 100, height: 100, borderRadius: 50, backgroundColor: COLORS.cardAlt, justifyContent: 'center', alignItems: 'center' }}>
+              <Ionicons name="person" size={50} color={COLORS.textTertiary} />
+            </View>
+          )}
+          <View style={{ position: 'absolute', bottom: 0, right: 0, backgroundColor: COLORS.gold, padding: 8, borderRadius: 20 }}>
+            <Ionicons name="camera" size={16} color={COLORS.black} />
+          </View>
+        </TouchableOpacity>
+      </View>
       <Text style={styles.label}>Display Name</Text>
       <TextInput style={styles.input} value={displayName} onChangeText={setDisplayName} placeholderTextColor={COLORS.textTertiary} />
       
@@ -57,7 +105,7 @@ export default function EditProfileSettings() {
           <Text style={styles.upgradeBtnText}>Upgrade to Artist Account</Text>
         </TouchableOpacity>
       )}
-    </View>
+    </ScrollView>
   );
 }
 
