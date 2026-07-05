@@ -87,7 +87,6 @@ export default function PlayerScreen() {
     return () => clearInterval(interval);
   }, [sleepTimerMs]);
 
-  const { downloadTrack, isDownloaded, isDownloading, downloadProgress } = useOfflineStore();
 
   if (!currentTrack) {
     return (
