@@ -43,8 +43,8 @@ export default function HomeScreen() {
       supabase.from('tracks').select('*, profile:profiles!tracks_user_id_fkey(*)').eq('is_public', true).order('play_count', { ascending: false }).limit(10),
       supabase.from('tracks').select('*, profile:profiles!tracks_user_id_fkey(*)').eq('is_public', true).order('created_at', { ascending: false }).limit(10),
       supabase.from('profiles').select('*').eq('role', 'artist').order('follower_count', { ascending: false }).limit(10),
-      supabase.from('playlists').select('id, title, cover_url, track_count').eq('is_public', true).order('track_count', { ascending: false }).limit(10),
-      session?.user.id ? supabase.from('playlists').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false }).limit(10) : Promise.resolve({ data: null })
+      supabase.from('playlists').select('id, title, cover_url, track_count').eq('is_public', true).gt('track_count', 0).order('track_count', { ascending: false }).limit(10),
+      session?.user.id ? supabase.from('playlists').select('*').eq('user_id', session.user.id).gt('track_count', 0).order('created_at', { ascending: false }).limit(10) : Promise.resolve({ data: null })
     ]);
     if (trendRes.data) setTrending(trendRes.data as Track[]);
     if (newRes.data) setNewReleases(newRes.data as Track[]);
