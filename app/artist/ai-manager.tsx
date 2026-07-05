@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   FlatList, KeyboardAvoidingView, Platform, ActivityIndicator,
-  Alert
+  Alert, Linking, Share
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
@@ -78,6 +78,11 @@ HOW TO RESPOND:
 - NEVER use emojis in your responses — keep it clean and professional text only.
 - Always address the artist by their name: ${profile?.display_name || 'Msanii'}
 - Do NOT be a fluffy, overly polite assistant. Be a serious business partner whose only goal is to make the artist famous and rich.
+
+SOCIAL MEDIA POSTING (VERY IMPORTANT):
+If the artist asks you to write, draft, or create a social media post (e.g., for Instagram, Twitter, or WhatsApp), you MUST output the drafted content inside XML tags like this:
+<DRAFT platform="twitter">This is the tweet content! #BongoFlava</DRAFT>
+You can use "twitter", "whatsapp", or "instagram" as the platform. Always include the <DRAFT> tags so the app can create a clickable Post button for the artist. Use emojis ONLY inside the DRAFT tags if appropriate for the post.
 
 Hustle hard for your artist. Make them money!`;
   };
@@ -192,6 +197,92 @@ Hustle hard for your artist. Make them money!`;
     }
   }, [messages]);
 
+  const handlePostAction = async (platform: string, content: string) => {
+    try {
+      if (platform.toLowerCase() === 'twitter') {
+        const url = \`https://twitter.com/intent/tweet?text=\${encodeURIComponent(content)}\`;
+        await Linking.openURL(url);
+      } else if (platform.toLowerCase() === 'whatsapp') {
+        const url = \`whatsapp://send?text=\${encodeURIComponent(content)}\`;
+        const canOpen = await Linking.canOpenURL(url);
+        if (canOpen) {
+          await Linking.openURL(url);
+        } else {
+          Alert.alert('Error', 'WhatsApp is not installed.');
+        }
+      } else {
+        // Fallback for Instagram or general sharing
+        await Share.share({ message: content });
+      }
+    } catch (e: any) {
+      Alert.alert('Error', 'Could not open sharing app.');
+    }
+  };
+
+  const renderMessageContent = (text: string) => {
+    // Regex to match <DRAFT platform="...">content</DRAFT>
+    const draftRegex = /<DRAFT platform="([^"]*)">([\s\S]*?)<\/DRAFT>/g;
+    
+    let parts = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = draftRegex.exec(text)) !== null) {
+      // Add text before the draft
+      if (match.index > lastIndex) {
+        parts.push({ type: 'text', content: text.substring(lastIndex, match.index) });
+      }
+      // Add the draft card
+      parts.push({ type: 'draft', platform: match[1], content: match[2].trim() });
+      lastIndex = draftRegex.lastIndex;
+    }
+    
+    // Add remaining text
+    if (lastIndex < text.length) {
+      parts.push({ type: 'text', content: text.substring(lastIndex) });
+    }
+
+    // If no drafts found, just return normal text
+    if (parts.length === 0) {
+      return <Text style={styles.aiText}>{text}</Text>;
+    }
+
+    return (
+      <View style={{ gap: 12 }}>
+        {parts.map((part, index) => {
+          if (part.type === 'text') {
+            const cleanText = part.content.trim();
+            if (!cleanText) return null;
+            return <Text key={index} style={styles.aiText}>{cleanText}</Text>;
+          } else {
+            return (
+              <View key={index} style={styles.draftCard}>
+                <View style={styles.draftHeader}>
+                  <Ionicons 
+                    name={part.platform.toLowerCase() === 'twitter' ? 'logo-twitter' : part.platform.toLowerCase() === 'whatsapp' ? 'logo-whatsapp' : 'share-social'} 
+                    size={16} 
+                    color={COLORS.gold} 
+                  />
+                  <Text style={styles.draftPlatform}>
+                    Draft: {part.platform.charAt(0).toUpperCase() + part.platform.slice(1)}
+                  </Text>
+                </View>
+                <Text style={styles.draftContent}>{part.content}</Text>
+                <TouchableOpacity 
+                  style={styles.postButton}
+                  onPress={() => handlePostAction(part.platform, part.content)}
+                >
+                  <Text style={styles.postButtonText}>Post to {part.platform.charAt(0).toUpperCase() + part.platform.slice(1)}</Text>
+                  <Ionicons name="send" size={14} color={COLORS.black} />
+                </TouchableOpacity>
+              </View>
+            );
+          }
+        })}
+      </View>
+    );
+  };
+
   const renderMessage = ({ item }: { item: Message }) => {
     const isUser = item.role === 'user';
     return (
@@ -202,9 +293,11 @@ Hustle hard for your artist. Make them money!`;
           </View>
         )}
         <View style={[styles.bubble, isUser ? styles.userBubble : styles.aiBubble]}>
-          <Text style={[styles.bubbleText, isUser ? styles.userText : styles.aiText]}>
-            {item.text}
-          </Text>
+          {isUser ? (
+            <Text style={styles.userText}>{item.text}</Text>
+          ) : (
+            renderMessageContent(item.text)
+          )}
         </View>
       </View>
     );
@@ -347,6 +440,15 @@ const styles = StyleSheet.create({
   bubbleText: { fontSize: 15, lineHeight: 21 },
   userText: { color: COLORS.black, fontWeight: '500' },
   aiText: { color: '#FFFFFF', fontSize: 15, lineHeight: 22 },
+  
+  // Draft Card
+  draftCard: { backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 12, padding: 12, marginTop: 4, borderWidth: 1, borderColor: 'rgba(212, 175, 55, 0.2)' },
+  draftHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+  draftPlatform: { color: COLORS.gold, fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
+  draftContent: { color: '#FFFFFF', fontSize: 14, lineHeight: 20, marginBottom: 12, fontStyle: 'italic' },
+  postButton: { backgroundColor: COLORS.gold, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 8, gap: 8 },
+  postButtonText: { color: COLORS.black, fontSize: 14, fontWeight: '700' },
+
   typingRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 4 },
   typingBubble: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.07)', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 18, borderBottomLeftRadius: 4 },
   typingText: { color: COLORS.textSecondary, fontSize: 14 },
