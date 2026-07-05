@@ -125,6 +125,7 @@ export default function ProfileScreen() {
         {(profile.role === 'artist' || profile.role === 'admin') && (
           <>
             <MenuRow icon="stats-chart" label="Artist Analytics Dashboard" iconColor={COLORS.gold} onPress={() => router.push('/artist/dashboard')} />
+            <MenuRow icon="wallet" label="Artist Wallet & Payouts" iconColor={COLORS.gold} onPress={() => router.push('/artist/wallet')} />
             <MenuRow icon="briefcase" label={profile.role === 'admin' ? "AI Manager (Free)" : "AI Manager (Credits)"} iconColor={COLORS.gold} onPress={() => router.push('/artist/ai-manager')} />
             <MenuRow icon="checkmark-circle" label="Get Verified" iconColor={COLORS.gold} onPress={() => router.push('/settings/verify')} />
           </>

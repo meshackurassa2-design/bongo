@@ -15,6 +15,8 @@ import { useTranslation } from 'react-i18next';
 import TrackItem from '../../components/TrackItem';
 import { getGreeting } from '../../utils/helpers';
 
+const REGIONS = ['All', 'Kinondoni', 'Ilala', 'Temeke', 'Mwanza', 'Arusha', 'Dodoma'];
+
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
@@ -30,6 +32,7 @@ export default function HomeScreen() {
   const [albums, setAlbums] = useState<Playlist[]>([]);
   const [myPlaylists, setMyPlaylists] = useState<Playlist[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedRegion, setSelectedRegion] = useState('All');
 
   useFocusEffect(
     useCallback(() => {
@@ -37,16 +40,32 @@ export default function HomeScreen() {
     }, [])
   );
 
+  useEffect(() => {
+    loadTrending();
+  }, [selectedRegion]);
+
+  const loadTrending = async () => {
+    let query = supabase.from('tracks').select('*, profile:profiles!inner(*)').eq('is_public', true).order('play_count', { ascending: false }).limit(10);
+    
+    if (selectedRegion !== 'All') {
+      query = query.ilike('profile.location', `%${selectedRegion}%`);
+    }
+    
+    const { data } = await query;
+    if (data) setTrending(data as Track[]);
+  };
+
   const loadData = async () => {
     setLoading(true);
-    const [trendRes, newRes, artistsRes, albumsRes, myPlaylistsRes] = await Promise.all([
-      supabase.from('tracks').select('*, profile:profiles!tracks_user_id_fkey(*)').eq('is_public', true).order('play_count', { ascending: false }).limit(10),
+    const [newRes, artistsRes, albumsRes, myPlaylistsRes] = await Promise.all([
       supabase.from('tracks').select('*, profile:profiles!tracks_user_id_fkey(*)').eq('is_public', true).order('created_at', { ascending: false }).limit(10),
       supabase.from('profiles').select('*').eq('role', 'artist').order('follower_count', { ascending: false }).limit(10),
       supabase.from('playlists').select('id, title, cover_url, track_count').eq('is_public', true).gt('track_count', 0).order('track_count', { ascending: false }).limit(10),
       session?.user.id ? supabase.from('playlists').select('*').eq('user_id', session.user.id).gt('track_count', 0).order('created_at', { ascending: false }).limit(10) : Promise.resolve({ data: null })
     ]);
-    if (trendRes.data) setTrending(trendRes.data as Track[]);
+    
+    await loadTrending(); // loads the trending separately so it can be re-run on region change
+    
     if (newRes.data) setNewReleases(newRes.data as Track[]);
     if (artistsRes.data) setArtists(artistsRes.data as Profile[]);
     if (albumsRes.data) setAlbums(albumsRes.data as Playlist[]);
@@ -198,12 +217,28 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {/* Trending Songs */}
-      {trending.length > 0 && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{t('home.trending_songs')}</Text>
-          </View>
+      {/* Trending Songs (Mtaa Leaderboards) */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Mtaa Leaderboards 🏆</Text>
+        </View>
+        
+        {/* Region Selector */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.genrePills, { marginBottom: 16 }]}>
+          {REGIONS.map(region => (
+            <TouchableOpacity
+              key={region}
+              style={[styles.genrePill, selectedRegion === region && { backgroundColor: COLORS.gold, borderColor: COLORS.gold }]}
+              onPress={() => setSelectedRegion(region)}
+            >
+              <Text style={[styles.genrePillText, selectedRegion === region && { color: COLORS.black, fontWeight: '800' }]}>
+                {region === 'All' ? 'Tanzania (All)' : region}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {trending.length > 0 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScroll}>
             {trending.map(track => (
               <TouchableOpacity
@@ -227,8 +262,13 @@ export default function HomeScreen() {
               </TouchableOpacity>
             ))}
           </ScrollView>
-        </View>
-      )}
+        ) : (
+          <View style={{ padding: 20, alignItems: 'center' }}>
+            <Ionicons name="musical-notes-outline" size={32} color={COLORS.textTertiary} />
+            <Text style={{ color: COLORS.textSecondary, marginTop: 8 }}>No tracks trending in this region yet.</Text>
+          </View>
+        )}
+      </View>
 
       {/* Trending Artists */}
       {artists.length > 0 && (
