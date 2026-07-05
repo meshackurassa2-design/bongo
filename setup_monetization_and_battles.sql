@@ -94,10 +94,10 @@ ALTER TABLE public.song_battles ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Everyone can view battles" ON public.song_battles;
 CREATE POLICY "Everyone can view battles" ON public.song_battles FOR SELECT USING (TRUE);
 
-DROP POLICY IF EXISTS "Admins can manage battles" ON public.song_battles;
-CREATE POLICY "Admins can manage battles" ON public.song_battles 
-    USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'))
-    WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+DROP POLICY IF EXISTS "Admins and Artists can manage battles" ON public.song_battles;
+CREATE POLICY "Admins and Artists can manage battles" ON public.song_battles 
+    USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('admin', 'artist')))
+    WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('admin', 'artist')));
 
 -- 2. Create battle_votes table
 CREATE TABLE IF NOT EXISTS public.battle_votes (

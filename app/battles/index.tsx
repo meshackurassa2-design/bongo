@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Dimensions } from 'react-native';
-import { Stack, useFocusEffect, useRouter } from 'react-native-router-flux'; // wait, it's expo-router
-import { Stack as ExpoStack, useRouter as useExpoRouter } from 'expo-router';
+import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
@@ -12,7 +11,7 @@ import { useAuthStore } from '../../store/authStore';
 const { width } = Dimensions.get('window');
 
 export default function BattlesScreen() {
-  const router = useExpoRouter();
+  const router = useRouter();
   const profile = useAuthStore(s => s.profile);
   
   const [battles, setBattles] = useState<any[]>([]);
@@ -95,7 +94,7 @@ export default function BattlesScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ExpoStack.Screen options={{ title: 'Bongo Verzuz', headerShown: true, headerStyle: { backgroundColor: COLORS.black }, headerTintColor: COLORS.gold }} />
+        <Stack.Screen options={{ title: 'Bongo Verzuz', headerShown: true, headerStyle: { backgroundColor: COLORS.black }, headerTintColor: COLORS.gold }} />
         <ActivityIndicator color={COLORS.gold} size="large" />
       </View>
     );
@@ -103,7 +102,7 @@ export default function BattlesScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 60 }}>
-      <ExpoStack.Screen options={{ title: 'Bongo Verzuz', headerShown: true, headerStyle: { backgroundColor: COLORS.black }, headerTintColor: COLORS.gold, headerBackTitleVisible: false }} />
+      <Stack.Screen options={{ title: 'Bongo Verzuz', headerShown: true, headerStyle: { backgroundColor: COLORS.black }, headerTintColor: COLORS.gold, headerBackTitleVisible: false }} />
       
       <View style={styles.headerArea}>
         <Text style={styles.headerTitle}>BONGO VERZUZ 🥊</Text>

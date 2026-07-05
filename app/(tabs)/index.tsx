@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   FlatList, ImageBackground, Dimensions, ActivityIndicator
@@ -270,20 +270,6 @@ export default function HomeScreen() {
         )}
       </View>
 
-      {/* Bongo Battles Banner */}
-      <TouchableOpacity 
-        style={styles.battlesBanner}
-        onPress={() => router.push('/battles')}
-      >
-        <LinearGradient colors={['#FF3B30', '#007AFF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFillObject} />
-        <View style={styles.battlesBannerContent}>
-          <View>
-            <Text style={styles.battlesBannerTitle}>BONGO VERZUZ 🥊</Text>
-            <Text style={styles.battlesBannerSub}>Vote for your favorite tracks and help artists win cash prizes!</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={24} color="#fff" />
-        </View>
-      </TouchableOpacity>
 
       {/* Trending Artists */}
       {artists.length > 0 && (
@@ -350,6 +336,21 @@ export default function HomeScreen() {
           ))}
         </View>
       )}
+
+      {/* Bongo Battles Banner */}
+      <TouchableOpacity 
+        style={styles.battlesBanner}
+        onPress={() => router.push('/battles')}
+      >
+        <LinearGradient colors={['#FF3B30', '#007AFF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFillObject} />
+        <View style={styles.battlesBannerContent}>
+          <View>
+            <Text style={styles.battlesBannerTitle}>BONGO VERZUZ 🥊</Text>
+            <Text style={styles.battlesBannerSub}>Vote for your favorite tracks and help artists win cash prizes!</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="#fff" />
+        </View>
+      </TouchableOpacity>
 
       {trending.length === 0 && newReleases.length === 0 && (
         <View style={styles.empty}>

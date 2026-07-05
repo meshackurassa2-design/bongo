@@ -120,7 +120,6 @@ export default function ProfileScreen() {
             <MenuRow icon="settings" label="Admin System Settings" iconColor={COLORS.error} onPress={() => router.push('/admin/settings')} />
             <MenuRow icon="shield-checkmark" label="Admin Panel: Manage Tickets" iconColor={COLORS.error} onPress={() => router.push('/admin/tickets')} />
             <MenuRow icon="checkmark-done-circle" label="Admin Panel: Verifications" iconColor={COLORS.error} onPress={() => router.push('/admin/verifications')} />
-            <MenuRow icon="trophy" label="Admin Panel: Manage Battles" iconColor={COLORS.error} onPress={() => router.push('/admin/battles')} />
           </>
         )}
         {(profile.role === 'artist' || profile.role === 'admin') && (
@@ -129,6 +128,7 @@ export default function ProfileScreen() {
             <MenuRow icon="wallet" label="Artist Wallet & Payouts" iconColor={COLORS.gold} onPress={() => router.push('/artist/wallet')} />
             <MenuRow icon="briefcase" label={profile.role === 'admin' ? "AI Manager (Free)" : "AI Manager (Credits)"} iconColor={COLORS.gold} onPress={() => router.push('/artist/ai-manager')} />
             <MenuRow icon="checkmark-circle" label="Get Verified" iconColor={COLORS.gold} onPress={() => router.push('/settings/verify')} />
+            <MenuRow icon="trophy" label="Create Song Battle" iconColor={COLORS.gold} onPress={() => router.push('/artist/manage-battles')} />
           </>
         )}
         {profile.role !== 'artist' && profile.role !== 'admin' && (
@@ -149,11 +149,8 @@ export default function ProfileScreen() {
         <MenuRow icon="information-circle-outline" label={t('profile.about')} iconColor={COLORS.textSecondary} onPress={() => router.push('/settings/about')} isLast />
       </View>
 
-      <View style={styles.logoutContainer}>
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleSignOut}>
-          <Ionicons name="log-out-outline" size={20} color={COLORS.error} />
-          <Text style={styles.logoutText}>{t('profile.sign_out')}</Text>
-        </TouchableOpacity>
+      <View style={[styles.settingsGroup, { marginBottom: 40, borderColor: 'rgba(255, 59, 48, 0.3)' }]}>
+        <MenuRow icon="log-out-outline" label={t('profile.sign_out')} iconColor={COLORS.error} onPress={handleSignOut} isLast />
       </View>
 
       {/* Full Screen Image Modal */}
