@@ -42,7 +42,12 @@ export default function ProfileScreen() {
         </View>
         <Text style={styles.displayName}>{profile.display_name}</Text>
         <Text style={styles.username}>@{profile.username}</Text>
-        {profile.is_verified && <Text style={styles.verified}><Ionicons name="checkmark-circle" size={12} color={COLORS.gold} /> {t('profile.verified')}</Text>}
+        {profile.is_verified && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+            <Ionicons name="checkmark-circle" size={14} color={COLORS.gold} />
+            <Text style={styles.verified}>{t('profile.verified')}</Text>
+          </View>
+        )}
 
         <View style={styles.statsRow}>
           <StatItem label={t('profile.followers')} value={profile.follower_count} />

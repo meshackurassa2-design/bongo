@@ -250,9 +250,10 @@ export default function HomeScreen() {
                     <Ionicons name="person" size={40} color={COLORS.textTertiary} />
                   </View>
                 )}
-                <Text style={styles.artistName} numberOfLines={1}>
-                  {artist.display_name} {artist.is_verified ? <Ionicons name="checkmark-circle" size={12} color={COLORS.gold} /> : null}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 4 }}>
+                  <Text style={[styles.artistName, { marginTop: 0 }]} numberOfLines={1}>{artist.display_name}</Text>
+                  {artist.is_verified && <Ionicons name="checkmark-circle" size={12} color={COLORS.gold} style={{ marginLeft: 2 }} />}
+                </View>
               </TouchableOpacity>
             ))}
           </ScrollView>
