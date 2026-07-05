@@ -10,11 +10,14 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../store/authStore';
-import { COLORS, GENRES } from '../../constants';
+import { useThemeStore } from '../../store/themeStore';
+import { GENRES } from '../../constants';
 import * as FileSystem from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
 
 export default function UploadScreen() {
+  const { COLORS } = useThemeStore();
+  const styles = getStyles(COLORS);
   const router = useRouter();
   const session = useAuthStore(s => s.session);
   const profile = useAuthStore(s => s.profile);
@@ -245,7 +248,7 @@ function BongoInput({ label, value, onChangeText, placeholder, multiline }: { la
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.black, paddingHorizontal: 16, paddingTop: 60 },
   title: { color: COLORS.gold, fontSize: 26, fontWeight: '900', marginBottom: 4 },
   subtitle: { color: COLORS.textSecondary, fontSize: 14, marginBottom: 20 },

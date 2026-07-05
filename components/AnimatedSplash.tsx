@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Dimensions } from 'react-native';
-import { COLORS } from '../constants';
+import { useThemeStore } from '../store/themeStore';
+
 
 const { width, height } = Dimensions.get('window');
 
@@ -9,6 +10,8 @@ interface Props {
 }
 
 export default function AnimatedSplash({ isReady }: Props) {
+  const { COLORS } = useThemeStore();
+  const styles = getStyles(COLORS);
   const [isAnimationComplete, setIsAnimationComplete] = useState(false);
   const containerOpacity = useRef(new Animated.Value(1)).current;
   const scale = useRef(new Animated.Value(1)).current;
@@ -70,7 +73,7 @@ export default function AnimatedSplash({ isReady }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS: any) => StyleSheet.create({
   container: {
     position: 'absolute',
     top: 0, left: 0, right: 0, bottom: 0,

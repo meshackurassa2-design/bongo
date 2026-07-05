@@ -8,7 +8,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { supabase } from '../../lib/supabase';
-import { COLORS, GENRES, Track, Profile, Playlist } from '../../constants';
+import { useThemeStore } from '../../store/themeStore';
+import { GENRES, Track, Profile, Playlist } from '../../constants';
 import { usePlayerStore } from '../../store/playerStore';
 import { useAuthStore } from '../../store/authStore';
 import { useTranslation } from 'react-i18next';
@@ -20,12 +21,15 @@ const REGIONS = ['All', 'Kinondoni', 'Ilala', 'Temeke', 'Mwanza', 'Arusha', 'Dod
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
+  const { COLORS } = useThemeStore();
+  const styles = getStyles(COLORS);
   const router = useRouter();
   const { t } = useTranslation();
   const playTrack = usePlayerStore(s => s.playTrack);
   const currentTrack = usePlayerStore(s => s.currentTrack);
   const session = useAuthStore(s => s.session);
 
+  const [featured, setFeatured] = useState<Track[]>([]);
   const [trending, setTrending] = useState<Track[]>([]);
   const [newReleases, setNewReleases] = useState<Track[]>([]);
   const [artists, setArtists] = useState<Profile[]>([]);
@@ -57,7 +61,8 @@ export default function HomeScreen() {
 
   const loadData = async () => {
     setLoading(true);
-    const [newRes, artistsRes, albumsRes, myPlaylistsRes] = await Promise.all([
+    const [featuredRes, newRes, artistsRes, albumsRes, myPlaylistsRes] = await Promise.all([
+      supabase.from('tracks').select('*, profile:profiles!tracks_user_id_fkey(*)').eq('is_public', true).order('play_count', { ascending: false }).limit(5),
       supabase.from('tracks').select('*, profile:profiles!tracks_user_id_fkey(*)').eq('is_public', true).order('created_at', { ascending: false }).limit(10),
       supabase.from('profiles').select('*').eq('role', 'artist').order('follower_count', { ascending: false }).limit(10),
       supabase.from('playlists').select('id, title, cover_url, track_count').eq('is_public', true).gt('track_count', 0).order('track_count', { ascending: false }).limit(10),
@@ -66,6 +71,7 @@ export default function HomeScreen() {
     
     await loadTrending(); // loads the trending separately so it can be re-run on region change
     
+    if (featuredRes.data) setFeatured(featuredRes.data as Track[]);
     if (newRes.data) setNewReleases(newRes.data as Track[]);
     if (artistsRes.data) setArtists(artistsRes.data as Profile[]);
     if (albumsRes.data) setAlbums(albumsRes.data as Playlist[]);
@@ -122,7 +128,7 @@ export default function HomeScreen() {
       </LinearGradient>
 
       {/* Featured Carousel */}
-      {trending.length > 0 && (
+      {featured.length > 0 && (
         <View style={{ marginBottom: 24 }}>
           <ScrollView 
             horizontal 
@@ -132,11 +138,11 @@ export default function HomeScreen() {
             decelerationRate="fast"
             contentContainerStyle={{ paddingHorizontal: 16, gap: 16 }}
           >
-            {trending.slice(0, 5).map(track => (
+            {featured.map(track => (
               <TouchableOpacity
                 key={`featured-${track.id}`}
                 activeOpacity={0.9}
-                onPress={() => playTrack(track, trending)}
+                onPress={() => playTrack(track, featured)}
                 style={{ width: width - 32, height: 220, borderRadius: 24, overflow: 'hidden', backgroundColor: COLORS.card }}
               >
                 <Image
@@ -363,7 +369,7 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.black },
   loader: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.black },
   header: { paddingHorizontal: 20, paddingTop: 60, paddingBottom: 20 },

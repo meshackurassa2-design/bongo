@@ -5,9 +5,12 @@ import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
-import { COLORS } from '../constants';
+import { useThemeStore } from '../store/themeStore';
+
 
 export default function BuyCreditsScreen() {
+  const { COLORS } = useThemeStore();
+  const styles = getStyles(COLORS);
   const router = useRouter();
   const { session, profile, fetchProfile } = useAuthStore();
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -207,7 +210,7 @@ export default function BuyCreditsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 },
   backBtn: { padding: 4, marginLeft: -4 },

@@ -6,9 +6,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, Stack } from 'expo-router';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
-import { COLORS } from '../constants';
+import { useThemeStore } from '../store/themeStore';
+
 
 export default function StatsScreen() {
+  const { COLORS } = useThemeStore();
+  const styles = getStyles(COLORS);
   const session = useAuthStore(s => s.session);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -154,7 +157,7 @@ export default function StatsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.black },
   center: { flex: 1, backgroundColor: COLORS.black, justifyContent: 'center', alignItems: 'center' },
   header: { paddingTop: 60, paddingBottom: 30, paddingHorizontal: 20 },

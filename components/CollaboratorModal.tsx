@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, FlatList, ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
-import { COLORS } from '../constants';
+import { useThemeStore } from '../store/themeStore';
+
 import { Image } from 'expo-image';
 
 type CollaboratorModalProps = {
@@ -12,6 +13,8 @@ type CollaboratorModalProps = {
 };
 
 export default function CollaboratorModal({ visible, onClose, playlistId }: CollaboratorModalProps) {
+  const { COLORS } = useThemeStore();
+  const styles = getStyles(COLORS);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [collaborators, setCollaborators] = useState<any[]>([]);
@@ -190,7 +193,7 @@ export default function CollaboratorModal({ visible, onClose, playlistId }: Coll
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS: any) => StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
   container: { backgroundColor: COLORS.black, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: Platform.OS === 'ios' ? 40 : 20, minHeight: '70%', maxHeight: '90%' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },

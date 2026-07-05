@@ -5,12 +5,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import { supabase } from '../../lib/supabase';
-import { COLORS } from '../../constants';
+import { useThemeStore } from '../../store/themeStore';
+
 import { useAuthStore } from '../../store/authStore';
 
 const { width } = Dimensions.get('window');
 
 export default function BattlesScreen() {
+  const { COLORS } = useThemeStore();
+  const styles = getStyles(COLORS);
   const router = useRouter();
   const profile = useAuthStore(s => s.profile);
   
@@ -180,7 +183,7 @@ export default function BattlesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS: any) => StyleSheet.create({
   center: { flex: 1, backgroundColor: COLORS.black, justifyContent: 'center', alignItems: 'center' },
   container: { flex: 1, backgroundColor: COLORS.black, padding: 16 },
   headerArea: { alignItems: 'center', marginVertical: 20 },

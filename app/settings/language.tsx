@@ -1,12 +1,15 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../../constants';
+import { useThemeStore } from '../../store/themeStore';
+
 import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Stack } from 'expo-router';
 
 export default function LanguageSettings() {
+  const { COLORS } = useThemeStore();
+  const styles = getStyles(COLORS);
   const { t, i18n } = useTranslation();
 
   const setLanguage = async (lng: string) => {
@@ -32,7 +35,7 @@ export default function LanguageSettings() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.black, padding: 16 },
   subtitle: { color: COLORS.textSecondary, fontSize: 14, marginBottom: 20 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: COLORS.card, padding: 16, borderRadius: 12, marginBottom: 8 },

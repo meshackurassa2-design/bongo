@@ -2,7 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, Track } from '../constants';
+import { useThemeStore } from '../store/themeStore';
+import { Track } from '../constants';
 
 type Props = {
   track: Track;
@@ -13,6 +14,8 @@ type Props = {
 };
 
 export default function TrackItem({ track, isPlaying, onPress, onArtistPress, onDelete }: Props) {
+  const { COLORS } = useThemeStore();
+  const styles = getStyles(COLORS);
   const formatCount = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}K` : `${n}`;
 
   return (
@@ -64,7 +67,7 @@ export default function TrackItem({ track, isPlaying, onPress, onArtistPress, on
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS: any) => StyleSheet.create({
   container: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, gap: 12 },
   playing: { backgroundColor: COLORS.gold + '10' },
   coverWrap: { position: 'relative' },

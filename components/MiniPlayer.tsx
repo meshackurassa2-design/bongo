@@ -3,11 +3,14 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { usePlayerStore } from '../store/playerStore';
-import { COLORS } from '../constants';
+import { useThemeStore } from '../store/themeStore';
+
 
 import { useRouter } from 'expo-router';
 
 export default function MiniPlayer() {
+  const { COLORS } = useThemeStore();
+  const styles = getStyles(COLORS);
   const router = useRouter();
   const { currentTrack, isPlaying, positionMs, durationMs, togglePlayPause, skipNext, skipPrev } = usePlayerStore();
 
@@ -61,7 +64,7 @@ export default function MiniPlayer() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS: any) => StyleSheet.create({
   container: { backgroundColor: COLORS.card, borderTopWidth: 1, borderTopColor: COLORS.divider },
   progressTrack: { height: 2, backgroundColor: COLORS.divider },
   progressFill: { height: 2, backgroundColor: COLORS.gold },

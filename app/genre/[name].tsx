@@ -3,12 +3,15 @@ import { View, Text, StyleSheet, FlatList, ActivityIndicator } from 'react-nativ
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
-import { COLORS, Track } from '../../constants';
+import { useThemeStore } from '../../store/themeStore';
+import { Track } from '../../constants';
 import TrackItem from '../../components/TrackItem';
 import { usePlayerStore } from '../../store/playerStore';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 
 export default function GenreScreen() {
+  const { COLORS } = useThemeStore();
+  const styles = getStyles(COLORS);
   const { name } = useLocalSearchParams();
   const router = useRouter();
   const playTrack = usePlayerStore(s => s.playTrack);
@@ -57,7 +60,7 @@ export default function GenreScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.black },
   loader: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.black },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 60, paddingBottom: 20 },

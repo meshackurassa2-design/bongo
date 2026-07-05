@@ -3,7 +3,8 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityInd
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import { useAuthStore } from '../../store/authStore';
-import { COLORS } from '../../constants';
+import { useThemeStore } from '../../store/themeStore';
+
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
@@ -11,6 +12,8 @@ import { decode } from 'base64-arraybuffer';
 import { Image } from 'expo-image';
 
 export default function EditProfileSettings() {
+  const { COLORS } = useThemeStore();
+  const styles = getStyles(COLORS);
   const profile = useAuthStore(s => s.profile);
   const router = useRouter();
   const { t } = useTranslation();
@@ -109,7 +112,7 @@ export default function EditProfileSettings() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.black, padding: 16 },
   label: { color: COLORS.textSecondary, fontSize: 13, marginBottom: 8, marginTop: 16 },
   input: { backgroundColor: COLORS.card, color: COLORS.textPrimary, borderRadius: 12, padding: 14, fontSize: 15 },

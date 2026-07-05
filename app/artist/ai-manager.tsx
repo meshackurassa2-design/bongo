@@ -9,7 +9,8 @@ import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '../../store/authStore';
-import { COLORS } from '../../constants';
+import { useThemeStore } from '../../store/themeStore';
+
 import { supabase } from '../../lib/supabase';
 
 const GEMINI_API_KEY = 'AIzaSyDL_XcuNdTqN4_spDJRG2FXCw9g99zsjIY';
@@ -31,6 +32,8 @@ const QUICK_ACTIONS = [
 ];
 
 export default function AIManagerScreen() {
+  const { COLORS } = useThemeStore();
+  const styles = getStyles(COLORS);
   const router = useRouter();
   const { profile, session, fetchProfile } = useAuthStore();
   const flatListRef = useRef<FlatList>(null);
@@ -407,7 +410,7 @@ Hustle hard for your artist. Make them money!`;
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.black },
 
   // Header

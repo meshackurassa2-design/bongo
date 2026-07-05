@@ -9,11 +9,14 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { usePlayerStore } from '../store/playerStore';
 import { useOfflineStore } from '../store/offlineStore';
-import { COLORS } from '../constants';
+import { useThemeStore } from '../store/themeStore';
+
 
 const { width } = Dimensions.get('window');
 
 export default function PlayerScreen() {
+  const { COLORS } = useThemeStore();
+  const styles = getStyles(COLORS);
   const router = useRouter();
   const {
     currentTrack,
@@ -164,7 +167,7 @@ export default function PlayerScreen() {
         {isPlaying && (
           <Animated.View style={[styles.pulseCircle, { transform: [{ scale: pulseAnim }], opacity: pulseAnim.interpolate({ inputRange: [1, 1.15], outputRange: [0.6, 0] }) }]} />
         )}
-        <Animated.View style={{ transform: [{ scale: scaleAnim }], width: '100%', height: '100%', borderRadius: 24, elevation: 20, shadowColor: COLORS.gold, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20 }}>
+        <Animated.View style={{ transform: [{ scale: scaleAnim }], borderRadius: 24, elevation: 20, shadowColor: COLORS.gold, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20 }}>
           {currentTrack.cover_url ? (
             <Image source={{ uri: currentTrack.cover_url }} style={styles.cover} transition={300} cachePolicy="memory-disk" />
           ) : (
@@ -365,12 +368,12 @@ export default function PlayerScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS: any) => StyleSheet.create({
   container: { flex: 1, paddingTop: 40 },
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: 16, marginBottom: 20 },
   iconBtn: { padding: 8, width: 56, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1, marginTop: 14 },
-  coverWrap: { alignItems: 'center', marginBottom: 24, position: 'relative', width: width - 80, alignSelf: 'center' },
+  coverWrap: { alignItems: 'center', justifyContent: 'center', marginBottom: 24, position: 'relative', width: width - 80, height: width - 80, alignSelf: 'center' },
   pulseCircle: { position: 'absolute', width: width - 80, height: width - 80, borderRadius: 1000, backgroundColor: COLORS.gold, top: 0, left: 0 },
   cover: { width: width - 80, height: width - 80, borderRadius: 24, backgroundColor: COLORS.cardAlt, overflow: 'hidden' },
   coverFallback: { justifyContent: 'center', alignItems: 'center' },

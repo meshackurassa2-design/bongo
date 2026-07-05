@@ -4,12 +4,15 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
-import { COLORS, Track, Profile } from '../../constants';
+import { useThemeStore } from '../../store/themeStore';
+import { Track, Profile } from '../../constants';
 import { usePlayerStore } from '../../store/playerStore';
 import TrackItem from '../../components/TrackItem';
 import { debounce } from '../../utils/helpers';
 
 export default function SearchScreen() {
+  const { COLORS } = useThemeStore();
+  const styles = getStyles(COLORS);
   const router = useRouter();
   const playTrack = usePlayerStore(s => s.playTrack);
   const currentTrack = usePlayerStore(s => s.currentTrack);
@@ -128,7 +131,7 @@ export default function SearchScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.black, paddingTop: 60 },
   title: { color: COLORS.gold, fontSize: 26, fontWeight: '900', marginHorizontal: 16, marginBottom: 16 },
   searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: 14, marginHorizontal: 16, paddingHorizontal: 14, paddingVertical: 12, gap: 10, marginBottom: 8 },

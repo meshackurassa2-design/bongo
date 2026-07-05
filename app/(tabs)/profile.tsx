@@ -5,11 +5,14 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../store/authStore';
-import { COLORS } from '../../constants';
+import { useThemeStore } from '../../store/themeStore';
+
 import { useTranslation } from 'react-i18next';
 import * as ScreenCapture from 'expo-screen-capture';
 
 export default function ProfileScreen() {
+  const { COLORS } = useThemeStore();
+  const styles = getStyles(COLORS);
   const router = useRouter();
   const session = useAuthStore(s => s.session);
   const profile = useAuthStore(s => s.profile);
@@ -87,13 +90,13 @@ export default function ProfileScreen() {
         )}
 
         <View style={styles.statsRow}>
-          <StatItem label={t('profile.followers')} value={profile.follower_count} />
+          <StatItem label={t('profile.followers')} value={profile.follower_count || 0} styles={styles} />
+          <StatItem label={t('profile.following')} value={profile.following_count || 0} styles={styles} />
+          <StatItem label={t('profile.plays')} value={profile.total_plays || 0} styles={styles} />
           <View style={styles.statDivider} />
-          <StatItem label={t('profile.following')} value={profile.following_count} />
+          <StatItem label={t('profile.songs')} value={profile.track_count} styles={styles} />
           <View style={styles.statDivider} />
-          <StatItem label={t('profile.songs')} value={profile.track_count} />
-          <View style={styles.statDivider} />
-          <StatItem label="Credits" value={profile.credits || 0} />
+          <StatItem label="Credits" value={profile.credits || 0} styles={styles} />
         </View>
       </View>
 
@@ -117,40 +120,47 @@ export default function ProfileScreen() {
       <View style={styles.settingsGroup}>
         {profile.role === 'admin' && (
           <>
-            <MenuRow icon="settings" label="Admin System Settings" iconColor={COLORS.error} onPress={() => router.push('/admin/settings')} />
-            <MenuRow icon="shield-checkmark" label="Admin Panel: Manage Tickets" iconColor={COLORS.error} onPress={() => router.push('/admin/tickets')} />
-            <MenuRow icon="checkmark-done-circle" label="Admin Panel: Verifications" iconColor={COLORS.error} onPress={() => router.push('/admin/verifications')} />
+            <MenuRow icon="settings" label="Admin System Settings" iconColor={COLORS.error} onPress={() => router.push('/admin/settings')} styles={styles} COLORS={COLORS} />
+            <MenuRow icon="shield-checkmark" label="Admin Panel: Manage Tickets" iconColor={COLORS.error} onPress={() => router.push('/admin/tickets')} styles={styles} COLORS={COLORS} />
+            <MenuRow icon="checkmark-done-circle" label="Admin Panel: Verifications" iconColor={COLORS.error} onPress={() => router.push('/admin/verifications')} styles={styles} COLORS={COLORS} />
           </>
         )}
         {(profile.role === 'artist' || profile.role === 'admin') && (
           <>
-            <MenuRow icon="stats-chart" label="Artist Analytics Dashboard" iconColor={COLORS.gold} onPress={() => router.push('/artist/dashboard')} />
-            <MenuRow icon="wallet" label="Artist Wallet & Payouts" iconColor={COLORS.gold} onPress={() => router.push('/artist/wallet')} />
-            <MenuRow icon="briefcase" label={profile.role === 'admin' ? "AI Manager (Free)" : "AI Manager (Credits)"} iconColor={COLORS.gold} onPress={() => router.push('/artist/ai-manager')} />
-            <MenuRow icon="checkmark-circle" label="Get Verified" iconColor={COLORS.gold} onPress={() => router.push('/settings/verify')} />
-            <MenuRow icon="trophy" label="Create Song Battle" iconColor={COLORS.gold} onPress={() => router.push('/artist/manage-battles')} />
+            <MenuRow icon="stats-chart" label="Artist Analytics Dashboard" iconColor={COLORS.gold} onPress={() => router.push('/artist/dashboard')} styles={styles} COLORS={COLORS} />
+            <MenuRow icon="wallet" label="Artist Wallet & Payouts" iconColor={COLORS.gold} onPress={() => router.push('/artist/wallet')} styles={styles} COLORS={COLORS} />
+            <MenuRow icon="briefcase" label={profile.role === 'admin' ? "AI Manager (Free)" : "AI Manager (Credits)"} iconColor={COLORS.gold} onPress={() => router.push('/artist/ai-manager')} styles={styles} COLORS={COLORS} />
+            <MenuRow icon="checkmark-circle" label="Get Verified" iconColor={COLORS.gold} onPress={() => router.push('/settings/verify')} styles={styles} COLORS={COLORS} />
+            <MenuRow icon="trophy" label="Create Song Battle" iconColor={COLORS.gold} onPress={() => router.push('/artist/manage-battles')} styles={styles} COLORS={COLORS} />
           </>
         )}
         {profile.role !== 'artist' && profile.role !== 'admin' && (
-          <MenuRow icon="star" label="Become an Artist" iconColor={COLORS.gold} onPress={() => router.push('/settings/become-artist')} />
+          <MenuRow icon="star" label="Become an Artist" iconColor={COLORS.gold} onPress={() => router.push('/settings/become-artist')} styles={styles} COLORS={COLORS} />
         )}
-        <MenuRow icon="bar-chart" label="Bongo Wrapped (Stats)" iconColor={COLORS.gold} onPress={() => router.push('/stats')} />
-        <MenuRow icon="diamond" label="Buy Credits" iconColor={COLORS.gold} onPress={() => router.push('/buy-credits')} />
-        <MenuRow icon="library-outline" label={t('tabs.library') || "My Library"} iconColor={COLORS.textPrimary} onPress={() => router.push('/library')} />
-        <MenuRow icon="person-outline" label={t('profile.edit_profile')} iconColor={COLORS.textPrimary} onPress={() => router.push('/settings/edit-profile')} isLast />
+        <MenuRow icon="bar-chart" label="Bongo Wrapped (Stats)" iconColor={COLORS.gold} onPress={() => router.push('/stats')} styles={styles} COLORS={COLORS} />
+        <MenuRow icon="diamond" label="Buy Credits" iconColor={COLORS.gold} onPress={() => router.push('/buy-credits')} styles={styles} COLORS={COLORS} />
+        <MenuRow icon="library-outline" label={t('tabs.library') || "My Library"} iconColor={COLORS.textPrimary} onPress={() => router.push('/library')} styles={styles} COLORS={COLORS} />
+        <MenuRow icon="person-outline" label={t('profile.edit_profile')} iconColor={COLORS.textPrimary} onPress={() => router.push('/settings/edit-profile')} isLast styles={styles} COLORS={COLORS} />
       </View>
 
       {/* Settings section */}
       <Text style={styles.sectionTitle}>{t('profile.settings')}</Text>
       <View style={styles.settingsGroup}>
-        <MenuRow icon="notifications-outline" label={t('profile.notifications')} iconColor={COLORS.textSecondary} onPress={() => router.push('/settings/notifications')} />
-        <MenuRow icon="language-outline" label={t('settings.language')} iconColor={COLORS.textSecondary} onPress={() => router.push('/settings/language')} />
-        <MenuRow icon="headset-outline" label="Help & Support" iconColor={COLORS.textSecondary} onPress={() => router.push('/settings/support')} />
-        <MenuRow icon="information-circle-outline" label={t('profile.about')} iconColor={COLORS.textSecondary} onPress={() => router.push('/settings/about')} isLast />
+        <MenuRow icon="notifications-outline" label={t('profile.notifications')} iconColor={COLORS.textSecondary} onPress={() => router.push('/settings/notifications')} styles={styles} COLORS={COLORS} />
+        <MenuRow icon="language-outline" label={t('settings.language')} iconColor={COLORS.textSecondary} onPress={() => router.push('/settings/language')} styles={styles} COLORS={COLORS} />
+        <MenuRow icon="headset-outline" label="Help & Support" iconColor={COLORS.textSecondary} onPress={() => router.push('/settings/support')} styles={styles} COLORS={COLORS} />
+        <MenuRow icon="information-circle-outline" label={t('profile.about')} iconColor={COLORS.textSecondary} onPress={() => router.push('/settings/about')} isLast styles={styles} COLORS={COLORS} />
       </View>
 
       <View style={[styles.settingsGroup, { marginBottom: 40, borderColor: 'rgba(255, 59, 48, 0.3)' }]}>
-        <MenuRow icon="log-out-outline" label={t('profile.sign_out')} iconColor={COLORS.error} onPress={handleSignOut} isLast />
+        <MenuRow icon="log-out-outline" label={t('profile.sign_out')} iconColor={COLORS.error} onPress={handleSignOut} isLast styles={styles} COLORS={COLORS} />
+      </View>
+
+      {/* Theme Option */}
+      <Text style={styles.sectionTitle}>App Settings</Text>
+      <View style={[styles.settingsGroup, { marginBottom: 40 }]}>
+        <MenuRow icon="color-palette-outline" label="Theme" iconColor={COLORS.gold} onPress={() => router.push('/settings/theme')} styles={styles} COLORS={COLORS} />
+        <MenuRow icon="log-out-outline" label={t('profile.sign_out')} iconColor={COLORS.error} onPress={handleSignOut} isLast styles={styles} COLORS={COLORS} />
       </View>
 
       {/* Full Screen Image Modal */}
@@ -172,7 +182,7 @@ export default function ProfileScreen() {
   );
 }
 
-function StatItem({ label, value }: { label: string; value: number }) {
+function StatItem({ label, value, styles }: { label: string; value: number; styles: any }) {
   return (
     <View style={styles.statItem}>
       <Text style={styles.statValue}>{value >= 1000 ? `${(value / 1000).toFixed(1)}K` : value}</Text>
@@ -181,7 +191,7 @@ function StatItem({ label, value }: { label: string; value: number }) {
   );
 }
 
-function MenuRow({ icon, label, onPress, iconColor, isLast }: { icon: string; label: string; onPress: () => void, iconColor: string, isLast?: boolean }) {
+function MenuRow({ icon, label, onPress, iconColor, isLast, styles, COLORS }: { icon: string; label: string; onPress: () => void, iconColor: string, isLast?: boolean, styles: any, COLORS: any }) {
   return (
     <TouchableOpacity style={[styles.menuRow, isLast && styles.menuRowLast]} onPress={onPress}>
       <View style={styles.menuIconBox}>
@@ -193,7 +203,7 @@ function MenuRow({ icon, label, onPress, iconColor, isLast }: { icon: string; la
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.black, paddingTop: 60 },
   header: { alignItems: 'center', paddingVertical: 24, paddingHorizontal: 16 },
   avatarContainer: { width: 88, height: 88, borderRadius: 44, backgroundColor: COLORS.card, justifyContent: 'center', alignItems: 'center', marginBottom: 12, borderWidth: 3, borderColor: COLORS.gold },

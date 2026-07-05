@@ -5,7 +5,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '../../lib/supabase';
-import { COLORS, Track } from '../../constants';
+import { useThemeStore } from '../../store/themeStore';
+import { Track } from '../../constants';
 import TrackItem from '../../components/TrackItem';
 import { usePlayerStore } from '../../store/playerStore';
 import { useAuthStore } from '../../store/authStore';
@@ -13,6 +14,8 @@ import { useAuthStore } from '../../store/authStore';
 const { width } = Dimensions.get('window');
 
 export default function ArtistScreen() {
+  const { COLORS } = useThemeStore();
+  const styles = getStyles(COLORS);
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const playTrack = usePlayerStore(s => s.playTrack);
@@ -138,7 +141,7 @@ export default function ArtistScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.black },
   loader: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.black },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 60, paddingBottom: 10, zIndex: 10 },

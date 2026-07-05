@@ -2,7 +2,8 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { View, StyleSheet, Platform } from 'react-native';
 import { BottomTabBar } from '@react-navigation/bottom-tabs';
-import { COLORS } from '../../constants';
+import { useThemeStore } from '../../store/themeStore';
+
 import MiniPlayer from '../../components/MiniPlayer';
 import { usePlayerStore } from '../../store/playerStore';
 import { useAuthStore } from '../../store/authStore';
@@ -13,6 +14,8 @@ function TabBarIcon({ name, color }: { name: React.ComponentProps<typeof Ionicon
 }
 
 export default function TabsLayout() {
+  const { COLORS } = useThemeStore();
+  const styles = getStyles(COLORS);
   const { t } = useTranslation();
   const currentTrack = usePlayerStore(s => s.currentTrack);
   const profile = useAuthStore(s => s.profile);
@@ -84,7 +87,7 @@ export default function TabsLayout() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.black,

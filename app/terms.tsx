@@ -1,9 +1,12 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { Stack } from 'expo-router';
-import { COLORS } from '../constants';
+import { useThemeStore } from '../store/themeStore';
+
 
 export default function TermsScreen() {
+  const { COLORS } = useThemeStore();
+  const styles = getStyles(COLORS);
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ title: 'Terms & Conditions', headerShown: true, headerStyle: { backgroundColor: COLORS.black }, headerTintColor: COLORS.gold }} />
@@ -39,7 +42,7 @@ export default function TermsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.black },
   content: { padding: 16 },
   title: { color: COLORS.gold, fontSize: 22, fontWeight: 'bold', marginBottom: 4 },

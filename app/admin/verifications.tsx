@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
-import { COLORS } from '../../constants';
+import { useThemeStore } from '../../store/themeStore';
+
 import { supabase } from '../../lib/supabase';
 import { Image } from 'expo-image';
 
@@ -21,6 +22,8 @@ type Request = {
 };
 
 export default function AdminVerificationsScreen() {
+  const { COLORS } = useThemeStore();
+  const styles = getStyles(COLORS);
   const profile = useAuthStore(s => s.profile);
   const router = useRouter();
   
@@ -147,7 +150,7 @@ export default function AdminVerificationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS: any) => StyleSheet.create({
   center: { flex: 1, backgroundColor: COLORS.black, justifyContent: 'center', alignItems: 'center' },
   container: { flex: 1, backgroundColor: COLORS.black },
   title: { color: COLORS.textPrimary, fontSize: 22, fontWeight: 'bold', marginBottom: 20 },

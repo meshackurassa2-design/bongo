@@ -4,12 +4,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../store/authStore';
-import { COLORS, Track } from '../../constants';
+import { useThemeStore } from '../../store/themeStore';
+import { Track } from '../../constants';
 import { usePlayerStore } from '../../store/playerStore';
 import { useOfflineStore } from '../../store/offlineStore';
 import TrackItem from '../../components/TrackItem';
 
 export default function LibraryScreen() {
+  const { COLORS } = useThemeStore();
+  const styles = getStyles(COLORS);
   const router = useRouter();
   const session = useAuthStore(s => s.session);
   const playTrack = usePlayerStore(s => s.playTrack);
@@ -262,7 +265,7 @@ export default function LibraryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.black, paddingTop: 60 },
   title: { color: COLORS.gold, fontSize: 26, fontWeight: '900', marginHorizontal: 16, marginBottom: 16 },
   tabs: { paddingHorizontal: 16, gap: 10 },

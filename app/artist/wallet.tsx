@@ -3,10 +3,13 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
-import { COLORS } from '../../constants';
+import { useThemeStore } from '../../store/themeStore';
+
 import { useAuthStore } from '../../store/authStore';
 
 export default function ArtistWalletScreen() {
+  const { COLORS } = useThemeStore();
+  const styles = getStyles(COLORS);
   const profile = useAuthStore(s => s.profile);
   const router = useRouter();
 
@@ -162,7 +165,7 @@ export default function ArtistWalletScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS: any) => StyleSheet.create({
   center: { flex: 1, backgroundColor: COLORS.black, justifyContent: 'center', alignItems: 'center' },
   container: { flex: 1, backgroundColor: COLORS.black, padding: 16 },
   headerArea: { alignItems: 'center', marginVertical: 32 },

@@ -1,18 +1,52 @@
-export const COLORS = {
-  black: '#0A0A0F',
-  darkSurface: '#12121A',
-  card: '#1C1C28',
-  cardAlt: '#22222E',
-  gold: '#FFB830',
-  goldLight: '#FFD45C',
-  goldDark: '#CC8A00',
-  green: '#1DB954',
-  textPrimary: '#FFFFFF',
-  textSecondary: '#B3B3C8',
-  textTertiary: '#6B6B80',
-  divider: '#2A2A38',
-  error: '#FF5252',
+export const THEMES = {
+  luxury: {
+    black: '#0A0A0F',
+    darkSurface: '#12121A',
+    card: '#1C1C28',
+    cardAlt: '#22222E',
+    gold: '#FFB830',
+    goldLight: '#FFD45C',
+    goldDark: '#CC8A00',
+    green: '#1DB954',
+    textPrimary: '#FFFFFF',
+    textSecondary: '#B3B3C8',
+    textTertiary: '#6B6B80',
+    divider: '#2A2A38',
+    error: '#FF5252',
+  },
+  love: {
+    black: '#140A0D',
+    darkSurface: '#1C0E13',
+    card: '#29141B',
+    cardAlt: '#361A24',
+    gold: '#FF3366', // Vibrant Pink/Red
+    goldLight: '#FF668D',
+    goldDark: '#CC003D',
+    green: '#1DB954',
+    textPrimary: '#FFFFFF',
+    textSecondary: '#D9B3C0',
+    textTertiary: '#997A85',
+    divider: '#401C27',
+    error: '#FF5252',
+  },
+  ocean: {
+    black: '#050A14',
+    darkSurface: '#08101F',
+    card: '#0D1A33',
+    cardAlt: '#122447',
+    gold: '#00E5FF', // Cyan
+    goldLight: '#66EFFF',
+    goldDark: '#00B3CC',
+    green: '#1DB954',
+    textPrimary: '#FFFFFF',
+    textSecondary: '#B3CDE6',
+    textTertiary: '#6B8EAD',
+    divider: '#1A3366',
+    error: '#FF5252',
+  }
 };
+
+export const COLORS = THEMES.luxury;
 
 export const GENRES = [
   { name: 'Bongo Flava', icon: 'mic', color: '#E91E63' },

@@ -3,10 +3,13 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityInd
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
-import { COLORS } from '../../constants';
+import { useThemeStore } from '../../store/themeStore';
+
 import { supabase } from '../../lib/supabase';
 
 export default function VerifyScreen() {
+  const { COLORS } = useThemeStore();
+  const styles = getStyles(COLORS);
   const profile = useAuthStore(s => s.profile);
   const router = useRouter();
   
@@ -168,6 +171,8 @@ export default function VerifyScreen() {
 }
 
 function ReqItem({ met, text }: { met: boolean; text: string }) {
+  const { COLORS } = useThemeStore();
+  const styles = getStyles(COLORS);
   return (
     <View style={styles.reqItem}>
       <Ionicons 
@@ -180,7 +185,7 @@ function ReqItem({ met, text }: { met: boolean; text: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS: any) => StyleSheet.create({
   center: { flex: 1, backgroundColor: COLORS.black, justifyContent: 'center', alignItems: 'center' },
   container: { flex: 1, backgroundColor: COLORS.black },
   headerArea: { alignItems: 'center', marginBottom: 40, marginTop: 20 },

@@ -6,9 +6,12 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../store/authStore';
-import { COLORS } from '../constants';
+import { useThemeStore } from '../store/themeStore';
+
 
 export default function AuthScreen() {
+  const { COLORS } = useThemeStore();
+  const styles = getStyles(COLORS);
   const router = useRouter();
   const signIn = useAuthStore(s => s.signIn);
   const signUp = useAuthStore(s => s.signUp);
@@ -196,7 +199,7 @@ function Field({ label, value, onChange, placeholder, icon, keyboardType }: any)
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.black },
   content: { padding: 24, paddingTop: 72, gap: 12 },
   logoWrap: { alignItems: 'center', marginBottom: 4 },

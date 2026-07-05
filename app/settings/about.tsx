@@ -1,11 +1,14 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { COLORS } from '../../constants';
+import { useThemeStore } from '../../store/themeStore';
+
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function AboutSettings() {
+  const { COLORS } = useThemeStore();
+  const styles = getStyles(COLORS);
   const { t } = useTranslation();
   const router = useRouter();
 
@@ -34,7 +37,7 @@ export default function AboutSettings() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.black, padding: 16 },
   header: { alignItems: 'center', marginVertical: 32 },
   appName: { color: COLORS.textPrimary, fontSize: 24, fontWeight: 'bold', marginTop: 12 },

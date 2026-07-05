@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, Switch, StyleSheet } from 'react-native';
 import { Stack } from 'expo-router';
-import { COLORS } from '../../constants';
+import { useThemeStore } from '../../store/themeStore';
+
 import { useTranslation } from 'react-i18next';
 
 export default function NotificationsSettings() {
+  const { COLORS } = useThemeStore();
+  const styles = getStyles(COLORS);
   const { t } = useTranslation();
   const [enabled, setEnabled] = useState(true);
 
@@ -25,7 +28,7 @@ export default function NotificationsSettings() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.black, padding: 16 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: COLORS.card, padding: 16, borderRadius: 12 },
   label: { color: COLORS.textPrimary, fontSize: 16 }
