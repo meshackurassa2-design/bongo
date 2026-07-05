@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, KeyboardAvoidingView, Platform, Modal } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -14,6 +15,7 @@ export default function ProfileScreen() {
   const profile = useAuthStore(s => s.profile);
   const signOut = useAuthStore(s => s.signOut);
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   
   const [isImageModalVisible, setIsImageModalVisible] = useState(false);
 
@@ -155,7 +157,7 @@ export default function ProfileScreen() {
       {/* Full Screen Image Modal */}
       <Modal visible={isImageModalVisible} transparent={true} animationType="fade" onRequestClose={handleCloseImage}>
         <View style={styles.modalBackground}>
-          <TouchableOpacity style={styles.closeModalBtn} onPress={handleCloseImage}>
+          <TouchableOpacity style={[styles.closeModalBtn, { top: Math.max(50, insets.top + 10) }]} onPress={handleCloseImage}>
             <Ionicons name="close" size={32} color={COLORS.textPrimary} />
           </TouchableOpacity>
           {profile.avatar_url && (
@@ -221,4 +223,8 @@ const styles = StyleSheet.create({
   noAuthText: { color: COLORS.textSecondary, fontSize: 14 },
   loginBtn: { backgroundColor: COLORS.gold, borderRadius: 12, paddingHorizontal: 32, paddingVertical: 14, marginTop: 8 },
   loginBtnText: { color: COLORS.black, fontWeight: '800', fontSize: 16 },
+  
+  modalBackground: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'center', alignItems: 'center' },
+  closeModalBtn: { position: 'absolute', right: 20, zIndex: 10, padding: 10, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 20 },
+  fullScreenImage: { flex: 1, width: '100%', height: '100%' },
 });
