@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, KeyboardAvoidingView, Platform, Modal } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../store/authStore';
 import { COLORS } from '../../constants';
 import { useTranslation } from 'react-i18next';
+import * as ScreenCapture from 'expo-screen-capture';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -13,6 +14,26 @@ export default function ProfileScreen() {
   const profile = useAuthStore(s => s.profile);
   const signOut = useAuthStore(s => s.signOut);
   const { t } = useTranslation();
+  
+  const [isImageModalVisible, setIsImageModalVisible] = useState(false);
+
+  const handleOpenImage = async () => {
+    setIsImageModalVisible(true);
+    try {
+      await ScreenCapture.preventScreenCaptureAsync();
+    } catch (e) {
+      console.warn("Screen capture prevention not supported on this device/OS", e);
+    }
+  };
+
+  const handleCloseImage = async () => {
+    setIsImageModalVisible(false);
+    try {
+      await ScreenCapture.allowScreenCaptureAsync();
+    } catch (e) {
+      console.warn("Screen capture allow not supported on this device/OS", e);
+    }
+  };
 
   if (!session || !profile) {
     return (
@@ -38,7 +59,12 @@ export default function ProfileScreen() {
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 160 }} showsVerticalScrollIndicator={false}>
       {/* Profile header */}
       <View style={styles.header}>
-        <View style={styles.avatarContainer}>
+        <TouchableOpacity 
+          style={styles.avatarContainer} 
+          onPress={handleOpenImage} 
+          disabled={!profile.avatar_url}
+          activeOpacity={0.8}
+        >
           {profile.avatar_url ? (
             <Image 
               source={{ uri: profile.avatar_url }} 
@@ -48,7 +74,7 @@ export default function ProfileScreen() {
           ) : (
             <Ionicons name="musical-notes" size={40} color={COLORS.gold} />
           )}
-        </View>
+        </TouchableOpacity>
         <Text style={styles.displayName}>{profile.display_name}</Text>
         <Text style={styles.username}>@{profile.username}</Text>
         {profile.is_verified && (
@@ -119,10 +145,28 @@ export default function ProfileScreen() {
         <MenuRow icon="information-circle-outline" label={t('profile.about')} iconColor={COLORS.textSecondary} onPress={() => router.push('/settings/about')} isLast />
       </View>
 
-      <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut}>
-        <Ionicons name="log-out-outline" size={20} color={COLORS.error} />
-        <Text style={styles.signOutText}>{t('profile.sign_out')}</Text>
-      </TouchableOpacity>
+      <View style={styles.logoutContainer}>
+        <TouchableOpacity style={styles.logoutBtn} onPress={handleSignOut}>
+          <Ionicons name="log-out-outline" size={20} color={COLORS.error} />
+          <Text style={styles.logoutText}>{t('profile.sign_out')}</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Full Screen Image Modal */}
+      <Modal visible={isImageModalVisible} transparent={true} animationType="fade" onRequestClose={handleCloseImage}>
+        <View style={styles.modalBackground}>
+          <TouchableOpacity style={styles.closeModalBtn} onPress={handleCloseImage}>
+            <Ionicons name="close" size={32} color={COLORS.textPrimary} />
+          </TouchableOpacity>
+          {profile.avatar_url && (
+            <Image 
+              source={{ uri: profile.avatar_url }} 
+              style={styles.fullScreenImage} 
+              contentFit="contain"
+            />
+          )}
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -171,7 +215,6 @@ const styles = StyleSheet.create({
   menuRowLast: { borderBottomWidth: 0 },
   menuIconBox: { width: 38, height: 38, borderRadius: 12, backgroundColor: COLORS.cardAlt, justifyContent: 'center', alignItems: 'center' },
   menuLabel: { flex: 1, color: COLORS.textPrimary, fontSize: 16, fontWeight: '600' },
-  signOutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginHorizontal: 16, marginTop: 32, padding: 16, borderRadius: 20, backgroundColor: 'rgba(255, 60, 60, 0.1)', borderWidth: 1, borderColor: 'rgba(255, 60, 60, 0.3)', gap: 8 },
   signOutText: { color: COLORS.error, fontSize: 16, fontWeight: '700' },
   noAuth: { flex: 1, backgroundColor: COLORS.black, justifyContent: 'center', alignItems: 'center', gap: 12 },
   noAuthTitle: { color: COLORS.textPrimary, fontSize: 22, fontWeight: '700' },
