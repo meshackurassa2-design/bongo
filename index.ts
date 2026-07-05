@@ -1,4 +1,6 @@
 import { Alert } from 'react-native';
+import 'react-native-gesture-handler';
+import 'react-native-reanimated';
 
 // Catch any unhandled JS errors and show them in a native alert before crashing
 const originalHandler = global.ErrorUtils?.getGlobalHandler();
@@ -21,4 +23,4 @@ if (global.ErrorUtils) {
   });
 }
 
-import 'expo-router/entry';
+require('expo-router/entry');
