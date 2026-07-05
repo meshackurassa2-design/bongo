@@ -85,6 +85,7 @@ export default function ProfileScreen() {
         {profile.role !== 'artist' && profile.role !== 'admin' && (
           <MenuRow icon="star" label="Become an Artist" iconColor={COLORS.gold} onPress={() => router.push('/settings/become-artist')} />
         )}
+        <MenuRow icon="bar-chart" label="Bongo Wrapped (Stats)" iconColor={COLORS.gold} onPress={() => router.push('/stats')} />
         <MenuRow icon="diamond" label="Buy Credits" iconColor={COLORS.gold} onPress={() => router.push('/buy-credits')} />
         <MenuRow icon="library-outline" label={t('tabs.library') || "My Library"} iconColor={COLORS.textPrimary} onPress={() => router.push('/library')} />
         <MenuRow icon="person-outline" label={t('profile.edit_profile')} iconColor={COLORS.textPrimary} onPress={() => router.push('/settings/edit-profile')} isLast />

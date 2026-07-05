@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ActivityIndicator, Modal } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -28,7 +28,33 @@ export default function PlayerScreen() {
     toggleRepeat,
     playbackRate,
     setPlaybackRate,
+    sleepTimerMs,
+    setSleepTimer,
+    clearSleepTimer,
   } = usePlayerStore();
+
+  const [showSleepTimer, setShowSleepTimer] = useState(false);
+  const [showFxModal, setShowFxModal] = useState(false);
+  const [timeLeft, setTimeLeft] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!sleepTimerMs) {
+      setTimeLeft(null);
+      return;
+    }
+    const interval = setInterval(() => {
+      const diff = Math.max(0, sleepTimerMs - Date.now());
+      if (diff <= 0) {
+        setTimeLeft(null);
+        clearInterval(interval);
+      } else {
+        const m = Math.floor(diff / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+        setTimeLeft(`${m}:${s.toString().padStart(2, '0')}`);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [sleepTimerMs]);
 
   const { downloadTrack, isDownloaded, isDownloading, downloadProgress } = useOfflineStore();
 
@@ -57,7 +83,10 @@ export default function PlayerScreen() {
           <Ionicons name="chevron-down" size={32} color={COLORS.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Inacheza Sasa</Text>
-        <View style={styles.iconBtn} />
+        <TouchableOpacity style={styles.iconBtn} onPress={() => setShowSleepTimer(true)}>
+          <Ionicons name={sleepTimerMs ? "alarm" : "alarm-outline"} size={26} color={sleepTimerMs ? COLORS.gold : COLORS.textPrimary} />
+          {timeLeft && <Text style={{ color: COLORS.gold, fontSize: 10, fontWeight: '700', marginTop: 2 }}>{timeLeft}</Text>}
+        </TouchableOpacity>
       </View>
 
       {/* Cover Art */}
@@ -109,10 +138,7 @@ export default function PlayerScreen() {
             borderRadius: 20, 
             backgroundColor: playbackRate !== 1.0 ? COLORS.gold : COLORS.cardAlt 
           }}
-          onPress={() => {
-            const nextRate = playbackRate === 1.0 ? 1.5 : playbackRate === 1.5 ? 2.0 : playbackRate === 2.0 ? 0.5 : 1.0;
-            setPlaybackRate(nextRate);
-          }}
+          onPress={() => setShowFxModal(true)}
         >
           <Ionicons name="color-wand" size={16} color={playbackRate !== 1.0 ? COLORS.black : COLORS.textSecondary} />
           <Text style={{ 
@@ -121,7 +147,7 @@ export default function PlayerScreen() {
             fontSize: 12,
             letterSpacing: 1
           }}>
-            VOICE TUNER {playbackRate.toFixed(1)}x
+            AUDIO EFFECTS
           </Text>
         </TouchableOpacity>
       </View>
@@ -166,6 +192,85 @@ export default function PlayerScreen() {
           <Ionicons name="repeat" size={26} color={repeatOne ? COLORS.gold : COLORS.textSecondary} />
         </TouchableOpacity>
       </View>
+
+      {/* Sleep Timer Modal */}
+      <Modal visible={showSleepTimer} transparent animationType="slide">
+        <View style={styles.modalBg}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Set Sleep Timer</Text>
+            <Text style={styles.modalSub}>Music will pause automatically</Text>
+            
+            <View style={{ gap: 12, marginTop: 20 }}>
+              {[15, 30, 45, 60].map(mins => (
+                <TouchableOpacity 
+                  key={mins} 
+                  style={styles.sleepOptionBtn}
+                  onPress={() => { setSleepTimer(mins); setShowSleepTimer(false); }}
+                >
+                  <Text style={styles.sleepOptionText}>{mins} Minutes</Text>
+                  <Ionicons name="time-outline" size={20} color={COLORS.gold} />
+                </TouchableOpacity>
+              ))}
+              
+              {sleepTimerMs && (
+                <TouchableOpacity 
+                  style={[styles.sleepOptionBtn, { backgroundColor: 'rgba(255,50,50,0.1)', borderColor: 'rgba(255,50,50,0.3)' }]}
+                  onPress={() => { clearSleepTimer(); setShowSleepTimer(false); }}
+                >
+                  <Text style={[styles.sleepOptionText, { color: '#ff5555' }]}>Turn Off Timer</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <TouchableOpacity style={styles.closeModalBtn} onPress={() => setShowSleepTimer(false)}>
+              <Text style={styles.closeModalText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Audio Effects Modal */}
+      <Modal visible={showFxModal} transparent animationType="slide">
+        <View style={styles.modalBg}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Audio Effects</Text>
+            <Text style={styles.modalSub}>Adjust playback speed and pitch</Text>
+            
+            <View style={{ marginTop: 30, marginBottom: 20 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                <Text style={{ color: COLORS.textPrimary, fontWeight: '700' }}>Speed / Pitch</Text>
+                <Text style={{ color: COLORS.gold, fontWeight: '700' }}>{playbackRate.toFixed(2)}x</Text>
+              </View>
+              <Slider
+                style={{ width: '100%', height: 40 }}
+                minimumValue={0.5}
+                maximumValue={2.0}
+                step={0.1}
+                value={playbackRate}
+                onValueChange={setPlaybackRate}
+                minimumTrackTintColor={COLORS.gold}
+                maximumTrackTintColor={COLORS.divider}
+                thumbTintColor={COLORS.gold}
+              />
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: -10 }}>
+                <Text style={{ color: COLORS.textSecondary, fontSize: 12 }}>Slow & Low</Text>
+                <Text style={{ color: COLORS.textSecondary, fontSize: 12 }}>Fast & High</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity 
+              style={[styles.sleepOptionBtn, { justifyContent: 'center', marginBottom: 16 }]}
+              onPress={() => setPlaybackRate(1.0)}
+            >
+              <Text style={styles.sleepOptionText}>Reset to Normal</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.closeModalBtn} onPress={() => setShowFxModal(false)}>
+              <Text style={styles.closeModalText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 }
@@ -191,4 +296,13 @@ const styles = StyleSheet.create({
   controlsWrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 20 },
   ctrlBtn: { padding: 10 },
   playBtn: { width: 72, height: 72, borderRadius: 36, backgroundColor: COLORS.gold, justifyContent: 'center', alignItems: 'center' },
+  
+  modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: COLORS.card, padding: 24, borderTopLeftRadius: 32, borderTopRightRadius: 32, paddingBottom: 50 },
+  modalTitle: { color: COLORS.textPrimary, fontSize: 22, fontWeight: '800', textAlign: 'center' },
+  modalSub: { color: COLORS.textSecondary, fontSize: 14, textAlign: 'center', marginTop: 4 },
+  sleepOptionBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: COLORS.cardAlt, padding: 16, borderRadius: 16, borderWidth: 1, borderColor: COLORS.divider },
+  sleepOptionText: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '600' },
+  closeModalBtn: { marginTop: 24, padding: 16, borderRadius: 16, alignItems: 'center' },
+  closeModalText: { color: COLORS.textSecondary, fontSize: 16, fontWeight: '700' },
 });
