@@ -270,6 +270,21 @@ export default function HomeScreen() {
         )}
       </View>
 
+      {/* Bongo Battles Banner */}
+      <TouchableOpacity 
+        style={styles.battlesBanner}
+        onPress={() => router.push('/battles')}
+      >
+        <LinearGradient colors={['#FF3B30', '#007AFF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFillObject} />
+        <View style={styles.battlesBannerContent}>
+          <View>
+            <Text style={styles.battlesBannerTitle}>BONGO VERZUZ 🥊</Text>
+            <Text style={styles.battlesBannerSub}>Vote for your favorite tracks and help artists win cash prizes!</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="#fff" />
+        </View>
+      </TouchableOpacity>
+
       {/* Trending Artists */}
       {artists.length > 0 && (
         <View style={styles.section}>
@@ -365,15 +380,21 @@ const styles = StyleSheet.create({
   hScroll: { paddingHorizontal: 16, gap: 16 },
   
   hTrackCard: { width: 140 },
-  hTrackImage: { width: 140, height: 140, borderRadius: 12, backgroundColor: COLORS.cardAlt },
-  hTrackPlayingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
-  hTrackTitle: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '700', marginTop: 8 },
-  hTrackArtist: { color: COLORS.textSecondary, fontSize: 12, marginTop: 2 },
+  hTrackImage: { width: 120, height: 120, borderRadius: 16, marginBottom: 12, backgroundColor: COLORS.card },
+  hTrackPlayingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+  hTrackTitle: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '700', marginBottom: 4 },
+  hTrackArtist: { color: COLORS.textSecondary, fontSize: 13 },
   
-  artistCircle: { alignItems: 'center', width: 90 },
-  artistImage: { width: 80, height: 80, borderRadius: 40, marginBottom: 8 },
-  artistName: { color: COLORS.textPrimary, fontSize: 12, fontWeight: '600', textAlign: 'center' },
+  artistCircle: { width: 100, alignItems: 'center', marginRight: 16 },
+  artistImage: { width: 100, height: 100, borderRadius: 50, marginBottom: 12 },
+  artistName: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '700', textAlign: 'center', marginBottom: 4 },
+  artistFollowers: { color: COLORS.textSecondary, fontSize: 12, textAlign: 'center' },
   
+  battlesBanner: { marginHorizontal: 16, marginBottom: 32, borderRadius: 20, overflow: 'hidden' },
+  battlesBannerContent: { padding: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  battlesBannerTitle: { color: '#fff', fontSize: 22, fontWeight: '900', fontStyle: 'italic', marginBottom: 4 },
+  battlesBannerSub: { color: 'rgba(255,255,255,0.8)', fontSize: 13, maxWidth: '90%' },
+
   albumCard: { width: 140 },
   albumImage: { width: 140, height: 140, borderRadius: 12, backgroundColor: COLORS.cardAlt, marginBottom: 8 },
   albumTitle: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '700' },
