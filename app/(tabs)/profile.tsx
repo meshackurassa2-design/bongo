@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../store/authStore';
@@ -38,7 +39,15 @@ export default function ProfileScreen() {
       {/* Profile header */}
       <View style={styles.header}>
         <View style={styles.avatarContainer}>
-          <Ionicons name="musical-notes" size={40} color={COLORS.gold} />
+          {profile.avatar_url ? (
+            <Image 
+              source={{ uri: profile.avatar_url }} 
+              style={{ width: '100%', height: '100%', borderRadius: 45 }} 
+              transition={200}
+            />
+          ) : (
+            <Ionicons name="musical-notes" size={40} color={COLORS.gold} />
+          )}
         </View>
         <Text style={styles.displayName}>{profile.display_name}</Text>
         <Text style={styles.username}>@{profile.username}</Text>
