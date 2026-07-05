@@ -22,7 +22,7 @@ type Message = {
 };
 
 const QUICK_ACTIONS = [
-  { label: 'Promote Song', prompt: 'Niandikia ujumbe mzuri wa kutangaza wimbo wangu mpya kwenye social media. Ni mfupi, wa kuvutia, na wa kitaalamu.' },
+  { label: 'Promote Song', prompt: 'Niandikia draft ya ujumbe mzuri wa kutangaza wimbo wangu mpya kwenye Twitter au Instagram. Itengeneze iwe tayari kupostiwa.' },
   { label: 'Write My Bio', prompt: 'Niandikia bio ya kitaalamu kwa ajili ya profile yangu ya muziki. Itumie habari zangu nilizokupa.' },
   { label: 'Gig Pricing', prompt: 'Ningependa kujua bei ya kuimba kwenye show. Nipe bei inayofaa kwa Dar es Salaam, na pia kwa miji mingine ya Tanzania.' },
   { label: 'Grow Fans', prompt: 'Nipe mkakati wa kukuza wafuasi wangu kwenye Bongo Stream na social media. Nipe hatua za vitendo ambazo ninaweza kufanya wiki hii.' },
@@ -79,10 +79,10 @@ HOW TO RESPOND:
 - Always address the artist by their name: ${profile?.display_name || 'Msanii'}
 - Do NOT be a fluffy, overly polite assistant. Be a serious business partner whose only goal is to make the artist famous and rich.
 
-SOCIAL MEDIA POSTING (VERY IMPORTANT):
-If the artist asks you to write, draft, or create a social media post (e.g., for Instagram, Twitter, or WhatsApp), you MUST output the drafted content inside XML tags like this:
-<DRAFT platform="twitter">This is the tweet content! #BongoFlava</DRAFT>
-You can use "twitter", "whatsapp", or "instagram" as the platform. Always include the <DRAFT> tags so the app can create a clickable Post button for the artist. Use emojis ONLY inside the DRAFT tags if appropriate for the post.
+SOCIAL MEDIA POSTING (CRITICAL):
+If the artist asks you to write, draft, or create ANY social media post (tweet, instagram caption, whatsapp status), you MUST output the drafted content inside XML tags exactly like this:
+<draft platform="twitter">This is the tweet content! #BongoFlava</draft>
+The platform MUST be one of: "twitter", "whatsapp", or "instagram". You MUST include these tags so the app can create the Post button. Use emojis ONLY inside the draft tags.
 
 Hustle hard for your artist. Make them money!`;
   };
@@ -220,8 +220,8 @@ Hustle hard for your artist. Make them money!`;
   };
 
   const renderMessageContent = (text: string) => {
-    // Regex to match <DRAFT platform="...">content</DRAFT>
-    const draftRegex = /<DRAFT platform="([^"]*)">([\s\S]*?)<\/DRAFT>/g;
+    // Regex to match <draft platform="...">content</draft> (case-insensitive)
+    const draftRegex = /<draft[^>]*platform=["']?([^"'>\s]*)["']?[^>]*>([\s\S]*?)<\/draft>/gi;
     
     let parts = [];
     let lastIndex = 0;
