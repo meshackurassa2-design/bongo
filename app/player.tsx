@@ -85,7 +85,7 @@ export default function PlayerScreen() {
         <Text style={styles.headerTitle}>Inacheza Sasa</Text>
         <TouchableOpacity style={styles.iconBtn} onPress={() => setShowSleepTimer(true)}>
           <Ionicons name={sleepTimerMs ? "alarm" : "alarm-outline"} size={26} color={sleepTimerMs ? COLORS.gold : COLORS.textPrimary} />
-          {timeLeft && <Text style={{ color: COLORS.gold, fontSize: 10, fontWeight: '700', marginTop: 2 }}>{timeLeft}</Text>}
+          {timeLeft && <Text style={{ color: COLORS.gold, fontSize: 10, fontWeight: '700', marginTop: 2, width: 56, textAlign: 'center' }} numberOfLines={1} adjustsFontSizeToFit>{timeLeft}</Text>}
         </TouchableOpacity>
       </View>
 
@@ -277,9 +277,9 @@ export default function PlayerScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, paddingTop: 40 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, marginBottom: 20 },
-  iconBtn: { padding: 8, width: 48, alignItems: 'center' },
-  headerTitle: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
+  header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: 16, marginBottom: 20 },
+  iconBtn: { padding: 8, width: 56, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1, marginTop: 14 },
   coverWrap: { alignItems: 'center', marginBottom: 24 },
   cover: { width: width - 80, height: width - 80, borderRadius: 20, backgroundColor: COLORS.cardAlt, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.5, shadowRadius: 20 },
   coverFallback: { justifyContent: 'center', alignItems: 'center' },
