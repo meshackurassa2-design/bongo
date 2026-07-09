@@ -29,10 +29,16 @@ jobs:
       - name: Build Unsigned App
         run: |
           cd ios
+          # Force completely disable code signing for all Pods to prevent exit code 65
+          sed -i '' "s/react_native_post_install(installer)/react_native_post_install(installer)\n    installer.pods_project.targets.each do |target|\n      target.build_configurations.each do |config|\n        config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'\n        config.build_settings['CODE_SIGNING_REQUIRED'] = 'NO'\n      end\n    end/" Podfile
+          
+          # Re-run pod install to apply the new post-install hook
+          pod install
+          
           WORKSPACE=$(ls -d *.xcworkspace | head -n 1)
           SCHEME=$(basename "$WORKSPACE" .xcworkspace)
           echo "Building Workspace: $WORKSPACE, Scheme: $SCHEME"
-          xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" -configuration Release -sdk iphoneos -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+          xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" -configuration Release -sdk iphoneos -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" || exit 1
           
       - name: Package IPA
         run: |
