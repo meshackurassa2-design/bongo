@@ -13,6 +13,7 @@ import { useThemeStore } from '../store/themeStore';
 import { useAuthStore } from '../store/authStore';
 import { supabase } from '../lib/supabase';
 import { ScrollView } from 'react-native';
+import { useProgress, usePlaybackState, State } from 'react-native-track-player';
 
 
 const { width } = Dimensions.get('window');
@@ -23,9 +24,6 @@ export default function PlayerScreen() {
   const router = useRouter();
   const {
     currentTrack,
-    isPlaying,
-    positionMs,
-    durationMs,
     isShuffled,
     repeatOne,
     togglePlayPause,
@@ -43,6 +41,11 @@ export default function PlayerScreen() {
 
   const { downloadTrack, isDownloaded, isDownloading, downloadProgress } = useOfflineStore();
 
+  const { position, duration } = useProgress();
+  const playbackState = usePlaybackState();
+  const isPlaying = playbackState.state === State.Playing;
+  const positionMs = position * 1000;
+  const durationMs = duration * 1000;
   const [showSleepTimer, setShowSleepTimer] = useState(false);
   const [showFxModal, setShowFxModal] = useState(false);
   const [timeLeft, setTimeLeft] = useState<string | null>(null);

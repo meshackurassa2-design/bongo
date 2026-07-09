@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Audio, AVPlaybackStatus } from 'expo-av';
+import TrackPlayer, { Capability, State, Event } from 'react-native-track-player';
 import { Track } from '../constants';
 import { useOfflineStore } from './offlineStore';
 import { useAuthStore } from './authStore';
@@ -8,17 +8,16 @@ import { supabase } from '../lib/supabase';
 type PlayerStore = {
   currentTrack: Track | null;
   queue: Track[];
-  isPlaying: boolean;
-  hasCountedPlay: boolean;
-  positionMs: number;
-  durationMs: number;
   isShuffled: boolean;
   repeatOne: boolean;
   playbackRate: number;
-  sound: Audio.Sound | null;
   sleepTimerMs: number | null;
   sleepTimerInterval: any | null;
-  // Actions
+  hasCountedPlay: boolean;
+  isPlayerReady: boolean;
+  isPlaying: boolean;
+  
+  initPlayer: () => Promise<void>;
   playTrack: (track: Track, queue?: Track[]) => Promise<void>;
   togglePlayPause: () => Promise<void>;
   skipNext: () => Promise<void>;
@@ -29,128 +28,81 @@ type PlayerStore = {
   toggleRepeat: () => void;
   setSleepTimer: (minutes: number) => void;
   clearSleepTimer: () => void;
+  markPlayCounted: () => void;
   cleanup: () => Promise<void>;
 };
 
 export const usePlayerStore = create<PlayerStore>((set, get) => ({
   currentTrack: null,
   queue: [],
-  isPlaying: false,
-  hasCountedPlay: false,
-  positionMs: 0,
-  durationMs: 0,
   isShuffled: false,
   repeatOne: false,
   playbackRate: 1.0,
-  sound: null,
   sleepTimerMs: null,
   sleepTimerInterval: null,
+  hasCountedPlay: false,
+  isPlayerReady: false,
+  isPlaying: false,
 
-  playTrack: async (track, queue = [track]) => {
-    const { sound: prevSound } = get();
-    
-    // Update UI instantly to new track
-    set({ currentTrack: track, queue, hasCountedPlay: false, isPlaying: true });
-
-    if (prevSound) {
-      try {
-        await prevSound.unloadAsync();
-      } catch (e) {}
-    }
-
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: false,
-      staysActiveInBackground: true,
-      playsInSilentModeIOS: true,
-      shouldDuckAndroid: true,
-      playThroughEarpieceAndroid: false,
-    });
-
-    const localUri = useOfflineStore.getState().getLocalUri(track.id);
-    const isExtensionless = track.audio_url ? !track.audio_url.match(/\.(mp3|m4a|wav|ogg|aac|flac)(\?|$)/i) : false;
-    const audioSource = localUri 
-      ? { uri: localUri }
-      : { 
-          uri: track.audio_url,
-          ...(isExtensionless ? { overrideFileExtensionAndroid: 'mp3', headers: { 'Accept': 'audio/mpeg, audio/*, */*' } } : {})
-        };
-
+  initPlayer: async () => {
+    if (get().isPlayerReady) return;
     try {
-      const { sound, status } = await Audio.Sound.createAsync(
-        audioSource,
-        { shouldPlay: true, progressUpdateIntervalMillis: 500, rate: get().playbackRate, shouldCorrectPitch: false },
-        (status: AVPlaybackStatus) => {
-          if (status.isLoaded) {
-            const currentTrack = get().currentTrack as any;
-            const trackSeconds = currentTrack?.duration_sec || currentTrack?.duration || 0;
-            const fallbackDuration = trackSeconds * 1000;
-            
-            set({
-              positionMs: status.positionMillis,
-              durationMs: status.durationMillis || fallbackDuration,
-              isPlaying: status.isPlaying,
-            });
-
-            // 30-second play counter for monetization & stats
-            const { hasCountedPlay } = get();
-            if (currentTrack && !hasCountedPlay && status.positionMillis >= 30000) {
-              set({ hasCountedPlay: true });
-              if (!currentTrack.id.startsWith('local_') && !currentTrack.is_unpublished) {
-                supabase.rpc('increment_play_count', { track_id: currentTrack.id }).then(({ error }) => {
-                  if (error) console.log("Failed to increment play count:", error.message);
-                });
-              
-                // Record listening history (Bongo Wrapped)
-                const session = useAuthStore.getState().session;
-                if (session?.user.id) {
-                  supabase.from('listening_history').insert({
-                    user_id: session.user.id,
-                    track_id: currentTrack.id,
-                    duration_listened: Math.floor((status.durationMillis || 30000) / 1000)
-                  }).then(({ error }) => {
-                     if (error) console.log("Failed to log history:", error.message);
-                  });
-                }
-              }
-            }
-
-            // Auto-advance to next track
-            if (status.didJustFinish) {
-              if (get().repeatOne) {
-                sound.replayAsync();
-              } else {
-                get().skipNext();
-              }
-            }
-          }
-        }
-      );
-
-      // If user tapped a different track while this one was loading, discard this sound
-      if (get().currentTrack?.id !== track.id) {
-        sound.unloadAsync();
-        return;
-      }
-
-      set({
-        sound,
-        isPlaying: true,
+      await TrackPlayer.setupPlayer();
+      await TrackPlayer.updateOptions({
+        capabilities: [Capability.Play, Capability.Pause, Capability.SkipToNext, Capability.SkipToPrevious, Capability.Stop, Capability.SeekTo],
+        compactCapabilities: [Capability.Play, Capability.Pause, Capability.SkipToNext, Capability.SkipToPrevious],
       });
+
+      TrackPlayer.addEventListener(Event.PlaybackState, (event) => {
+         set({ isPlaying: event.state === State.Playing });
+      });
+
+      TrackPlayer.addEventListener(Event.PlaybackTrackChanged, () => {
+        set({ hasCountedPlay: false });
+      });
+
+      TrackPlayer.addEventListener(Event.PlaybackQueueEnded, () => {
+         if (get().repeatOne) {
+           TrackPlayer.seekTo(0);
+           TrackPlayer.play();
+         } else {
+           get().skipNext();
+         }
+      });
+
+      set({ isPlayerReady: true });
     } catch (e) {
-      console.error("Failed to load sound", e);
+      console.log("TrackPlayer setup error:", e);
     }
   },
 
+  playTrack: async (track, queue = [track]) => {
+    if (!get().isPlayerReady) await get().initPlayer();
+
+    set({ currentTrack: track, queue, hasCountedPlay: false });
+
+    const localUri = useOfflineStore.getState().getLocalUri(track.id);
+    
+    await TrackPlayer.reset();
+    await TrackPlayer.add({
+      id: track.id,
+      url: localUri || track.audio_url,
+      title: track.title,
+      artist: track.artist_name || 'Unknown Artist',
+      artwork: track.cover_url || undefined,
+      duration: track.duration_sec || 0,
+    });
+    
+    await TrackPlayer.setRate(get().playbackRate);
+    await TrackPlayer.play();
+  },
+
   togglePlayPause: async () => {
-    const { sound, isPlaying } = get();
-    if (!sound) return;
-    
-    set({ isPlaying: !isPlaying });
-    
-    if (isPlaying) {
-      await sound.pauseAsync();
+    const state = await TrackPlayer.getPlaybackState();
+    if (state.state === State.Playing) {
+      await TrackPlayer.pause();
     } else {
-      await sound.playAsync();
+      await TrackPlayer.play();
     }
   },
 
@@ -158,22 +110,16 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     const { queue, currentTrack, isShuffled, playTrack } = get();
     if (!currentTrack || queue.length === 0) return;
     const currentIdx = queue.findIndex(t => t.id === currentTrack.id);
-    let nextIdx: number;
-    if (isShuffled) {
-      nextIdx = Math.floor(Math.random() * queue.length);
-    } else {
-      nextIdx = (currentIdx + 1) % queue.length;
-    }
+    let nextIdx = isShuffled ? Math.floor(Math.random() * queue.length) : (currentIdx + 1) % queue.length;
     await playTrack(queue[nextIdx], queue);
   },
 
   skipPrev: async () => {
-    const { queue, currentTrack, positionMs, playTrack } = get();
-    const { sound } = get();
+    const { queue, currentTrack, playTrack } = get();
     if (!currentTrack) return;
-    // If > 3s in, restart current track
-    if (positionMs > 3000 && sound) {
-      await sound.setPositionAsync(0);
+    const progress = await TrackPlayer.getProgress();
+    if (progress.position > 3) {
+      await TrackPlayer.seekTo(0);
       return;
     }
     const currentIdx = queue.findIndex(t => t.id === currentTrack.id);
@@ -182,26 +128,16 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
   },
 
   seekTo: async (ms: number) => {
-    const { sound } = get();
-    if (!sound) return;
-    try {
-      await sound.setPositionAsync(ms);
-    } catch(e) {}
+    await TrackPlayer.seekTo(ms / 1000);
   },
 
   setPlaybackRate: async (rate: number) => {
     set({ playbackRate: rate });
-    const { sound } = get();
-    if (sound) {
-      try {
-        await sound.setRateAsync(rate, false);
-      } catch (e) {
-        console.log("Failed to set rate:", e);
-      }
-    }
+    await TrackPlayer.setRate(rate);
   },
 
   toggleShuffle: () => set(s => ({ isShuffled: !s.isShuffled })),
+  
   toggleRepeat: () => set(s => ({ repeatOne: !s.repeatOne })),
 
   setSleepTimer: (minutes: number) => {
@@ -216,12 +152,12 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     const targetTimeMs = Date.now() + minutes * 60 * 1000;
     set({ sleepTimerMs: targetTimeMs });
 
-    const interval = setInterval(() => {
-      const { sleepTimerMs, sound, isPlaying } = get();
+    const interval = setInterval(async () => {
+      const { sleepTimerMs } = get();
       if (!sleepTimerMs || Date.now() >= sleepTimerMs) {
-        if (isPlaying && sound) {
-          sound.pauseAsync();
-          set({ isPlaying: false });
+        const state = await TrackPlayer.getPlaybackState();
+        if (state.state === State.Playing) {
+          await TrackPlayer.pause();
         }
         get().clearSleepTimer();
       }
@@ -236,10 +172,34 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     set({ sleepTimerMs: null, sleepTimerInterval: null });
   },
 
+  markPlayCounted: () => {
+    const { currentTrack, hasCountedPlay } = get();
+    if (!currentTrack || hasCountedPlay) return;
+
+    set({ hasCountedPlay: true });
+    
+    if (!currentTrack.id.startsWith('local_') && !(currentTrack as any).is_unpublished) {
+      supabase.rpc('increment_play_count', { track_id: currentTrack.id }).then(({ error }) => {
+        if (error) console.log("Failed to increment play count:", error.message);
+      });
+    
+      const session = useAuthStore.getState().session;
+      if (session?.user.id) {
+        supabase.from('listening_history').insert({
+          user_id: session.user.id,
+          track_id: currentTrack.id,
+          duration_listened: Math.floor(currentTrack.duration_sec || 30)
+        }).then(({ error }) => {
+           if (error) console.log("Failed to log history:", error.message);
+        });
+      }
+    }
+  },
+
   cleanup: async () => {
-    const { sound, sleepTimerInterval } = get();
+    const { sleepTimerInterval } = get();
     if (sleepTimerInterval) clearInterval(sleepTimerInterval);
-    if (sound) await sound.unloadAsync();
-    set({ sound: null, currentTrack: null, isPlaying: false, sleepTimerMs: null, sleepTimerInterval: null });
+    await TrackPlayer.reset();
+    set({ currentTrack: null, sleepTimerMs: null, sleepTimerInterval: null });
   },
 }));

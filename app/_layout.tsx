@@ -12,6 +12,11 @@ import '../i18n';
 // Ignore harmless background Supabase auth network errors in dev mode
 LogBox.ignoreLogs(['TypeError: Network request failed']);
 
+import TrackPlayer from 'react-native-track-player';
+try {
+  TrackPlayer.registerPlaybackService(() => require('../service'));
+} catch (e) {}
+
 const customTheme = {
   ...DarkTheme,
   colors: {

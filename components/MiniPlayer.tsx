@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { usePlayerStore } from '../store/playerStore';
 import { useThemeStore } from '../store/themeStore';
-
+import { useProgress, usePlaybackState, State } from 'react-native-track-player';
 
 import { useRouter } from 'expo-router';
 
@@ -12,11 +12,20 @@ export default function MiniPlayer() {
   const { COLORS } = useThemeStore();
   const styles = getStyles(COLORS);
   const router = useRouter();
-  const { currentTrack, isPlaying, positionMs, durationMs, togglePlayPause, skipNext, skipPrev } = usePlayerStore();
+  const { currentTrack, togglePlayPause, skipNext, skipPrev, markPlayCounted, hasCountedPlay } = usePlayerStore();
+  const { position, duration } = useProgress();
+  const playbackState = usePlaybackState();
+  const isPlaying = playbackState.state === State.Playing;
+
+  useEffect(() => {
+    if (position >= 30 && !hasCountedPlay && currentTrack) {
+      markPlayCounted();
+    }
+  }, [position, hasCountedPlay, currentTrack]);
 
   if (!currentTrack) return null;
 
-  const progress = durationMs > 0 ? positionMs / durationMs : 0;
+  const progress = duration > 0 ? position / duration : 0;
 
   return (
     <View style={styles.container}>
