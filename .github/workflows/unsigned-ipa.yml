@@ -29,8 +29,12 @@ jobs:
       - name: Build Unsigned App
         run: |
           cd ios
-          # Ensure Xcode can find the Node.js binary installed by GitHub Actions
-          echo "export NODE_BINARY=$(command -v node)" > .xcode.env.local
+          # Ensure Xcode can find the Node.js binary and has enough memory
+          NODE_PATH=$(which node)
+          echo "export NODE_BINARY=$NODE_PATH" >> .xcode.env.local
+          echo "export PATH=$(dirname $NODE_PATH):\$PATH" >> .xcode.env.local
+          echo "export NODE_OPTIONS=\"--max-old-space-size=8192\"" >> .xcode.env.local
+          cat .xcode.env.local
           
           # Force completely disable code signing for all Pods using Node.js to avoid BSD sed issues
           node -e "const fs = require('fs'); let podfile = fs.readFileSync('Podfile', 'utf8'); podfile = podfile.replace('react_native_post_install(installer)', 'react_native_post_install(installer)\\n    installer.pods_project.targets.each do |target|\\n      target.build_configurations.each do |config|\\n        config.build_settings[\\'CODE_SIGNING_ALLOWED\\'] = \\'NO\\'\\n        config.build_settings[\\'CODE_SIGNING_REQUIRED\\'] = \\'NO\\'\\n      end\\n    end'); fs.writeFileSync('Podfile', podfile);"
