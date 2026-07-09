@@ -105,7 +105,7 @@ export default function BattlesScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 60 }}>
-      <Stack.Screen options={{ title: 'Bongo Verzuz', headerShown: true, headerStyle: { backgroundColor: COLORS.black }, headerTintColor: COLORS.gold, headerBackTitleVisible: false }} />
+      <Stack.Screen options={{ title: 'Bongo Verzuz', headerShown: true, headerStyle: { backgroundColor: COLORS.black }, headerTintColor: COLORS.gold, }} />
       
       <View style={styles.headerArea}>
         <Text style={styles.headerTitle}>BONGO VERZUZ 🥊</Text>

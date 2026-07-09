@@ -32,7 +32,10 @@ export const useOfflineStore = create<OfflineStore>()(
 
         try {
           // Determine extension (default mp3)
-          const ext = track.audio_url.split('.').pop()?.split('?')[0] || 'mp3';
+          let ext = track.audio_url.split('.').pop()?.split('?')[0] || 'mp3';
+          if (!/^[a-zA-Z0-9]{2,4}$/.test(ext)) {
+            ext = 'mp3';
+          }
           const fileUri = `${FileSystem.documentDirectory}track_${track.id}.${ext}`;
           
           const downloadResumable = FileSystem.createDownloadResumable(

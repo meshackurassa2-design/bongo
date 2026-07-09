@@ -1,0 +1,47 @@
+name: Build Unsigned IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Expo Prebuild
+        run: npx expo prebuild -p ios --clean
+        
+      - name: Install CocoaPods
+        run: |
+          cd ios
+          pod install
+          
+      - name: Build Unsigned App
+        run: |
+          cd ios
+          WORKSPACE=$(ls *.xcworkspace | head -1)
+          SCHEME=$(xcodebuild -workspace "$WORKSPACE" -list | grep -A 1 'Information about project' | tail -1 | xargs)
+          echo "Building Workspace: $WORKSPACE, Scheme: $SCHEME"
+          xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" -configuration Release -sdk iphoneos -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+          
+      - name: Package IPA
+        run: |
+          mkdir -p Payload
+          mv ios/build/Build/Products/Release-iphoneos/*.app Payload/
+          zip -r bongo-stream-unsigned.ipa Payload
+          
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: bongo-stream-unsigned-ipa
+          path: bongo-stream-unsigned.ipa

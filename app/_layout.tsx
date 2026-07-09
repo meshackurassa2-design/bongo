@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ThemeProvider, DarkTheme } from '@react-navigation/native';
 import { StyleSheet, LogBox } from 'react-native';
 import AnimatedSplash from '../components/AnimatedSplash';
+import ThemeEffects from '../components/ThemeEffects';
 import '../i18n';
 
 // Ignore harmless background Supabase auth network errors in dev mode
@@ -57,6 +58,7 @@ export default function RootLayout() {
           <Stack.Screen name="genre/[name]" />
         </Stack>
         <AnimatedSplash isReady={!isLoading} />
+        <ThemeEffects />
       </ThemeProvider>
     </GestureHandlerRootView>
   );

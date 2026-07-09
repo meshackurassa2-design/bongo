@@ -17,8 +17,8 @@ import SoundsTab from '../../components/ai/SoundsTab';
 import AILyricsModal from '../../components/ai/AILyricsModal';
 import ExtractPersonaModal from '../../components/ai/ExtractPersonaModal';
 
-type TabType = 'Create' | 'Sounds' | 'Upload & Cover' | 'Workspace' | 'Personas';
-const TABS: TabType[] = ['Create', 'Sounds', 'Upload & Cover', 'Workspace', 'Personas'];
+type TabType = 'Create' | 'Sounds' | 'Workspace' | 'Personas';
+const TABS: TabType[] = ['Create', 'Sounds', 'Workspace', 'Personas'];
 
 export default function AIStudioScreen() {
   const { COLORS } = useThemeStore();
@@ -104,18 +104,19 @@ export default function AIStudioScreen() {
             onGenerateSuccess={() => setActiveTab('Workspace')} 
           />
         )}
-        {activeTab === 'Upload & Cover' && (
-          <UploadCoverTab 
-            onGenerateSuccess={() => setActiveTab('Workspace')} 
-          />
-        )}
         {activeTab === 'Workspace' && (
           <WorkspaceTab 
             openPersonaModal={(id) => setExtractAudioId(id)} 
           />
         )}
         {activeTab === 'Personas' && (
-          <PersonasTab />
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 }}>
+            <Ionicons name="mic-outline" size={64} color={COLORS.gold} style={{ marginBottom: 16, opacity: 0.5 }} />
+            <Text style={{ color: COLORS.textPrimary, fontSize: 22, fontWeight: '800', marginBottom: 8 }}>Custom Voice Clones</Text>
+            <Text style={{ color: COLORS.textSecondary, fontSize: 15, textAlign: 'center', lineHeight: 22 }}>
+              Extract your own voice and use it to sing any song you generate! This advanced feature is coming in the next big update. Stay tuned!
+            </Text>
+          </View>
         )}
       </View>
       

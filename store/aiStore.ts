@@ -9,6 +9,7 @@ export interface AISongTask {
   status: SunoTaskStatus;
   createdAt: number;
   tracks?: SunoAudioData[];
+  taskType?: 'GENERATE' | 'VOCAL_REMOVAL';
 }
 
 export interface Persona {
@@ -21,7 +22,7 @@ export interface Persona {
 interface AIStore {
   tasks: AISongTask[];
   personas: Persona[];
-  addTask: (taskId: string, title: string) => void;
+  addTask: (taskId: string, title: string, taskType?: 'GENERATE' | 'VOCAL_REMOVAL') => void;
   updateTask: (taskId: string, status: SunoTaskStatus, tracks?: SunoAudioData[]) => void;
   removeTask: (taskId: string) => void;
   addPersona: (persona: Persona) => void;
@@ -33,8 +34,8 @@ export const useAIStore = create<AIStore>()(
     (set) => ({
       tasks: [],
       personas: [],
-      addTask: (taskId, title) => set((state) => ({
-        tasks: [{ taskId, title, status: 'PENDING', createdAt: Date.now() }, ...state.tasks]
+      addTask: (taskId, title, taskType) => set((state) => ({
+        tasks: [{ taskId, title, status: 'PENDING', createdAt: Date.now(), taskType: taskType || 'GENERATE' }, ...state.tasks]
       })),
       updateTask: (taskId, status, tracks) => set((state) => ({
         tasks: state.tasks.map(t => t.taskId === taskId ? { ...t, status, tracks: tracks || t.tracks } : t)

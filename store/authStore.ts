@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 import { Session } from '@supabase/supabase-js';
 import { Profile } from '../constants';
+import { useThemeStore } from './themeStore';
 
 type AuthStore = {
   session: Session | null;
@@ -23,13 +24,37 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   init: async () => {
     const { data: { session } } = await supabase.auth.getSession();
     set({ session, isLoading: false });
+    
+    let currentChannel: any = null;
+
     if (session?.user) {
       get().fetchProfile(session.user.id);
+      
+      // Subscribe to real-time profile updates
+      currentChannel = supabase.channel(`profile_updates_${session.user.id}_${Date.now()}`)
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${session.user.id}` }, (payload) => {
+          set({ profile: payload.new as Profile });
+        })
+        .subscribe();
     }
+    
     supabase.auth.onAuthStateChange((_event, session) => {
       set({ session });
-      if (session?.user) get().fetchProfile(session.user.id);
-      else set({ profile: null });
+      if (currentChannel) {
+        supabase.removeChannel(currentChannel);
+        currentChannel = null;
+      }
+      
+      if (session?.user) {
+        get().fetchProfile(session.user.id);
+        currentChannel = supabase.channel(`profile_updates_${session.user.id}_${Date.now()}`)
+          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${session.user.id}` }, (payload) => {
+            set({ profile: payload.new as Profile });
+          })
+          .subscribe();
+      } else {
+        set({ profile: null });
+      }
     });
   },
 
@@ -71,6 +96,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       .select('*')
       .eq('id', id)
       .single();
-    if (data) set({ profile: data as Profile });
+    if (data) {
+      set({ profile: data as Profile });
+      if (data.partner_id && useThemeStore.getState().theme !== 'love') {
+        useThemeStore.getState().setTheme('love');
+      }
+    }
   },
 }));

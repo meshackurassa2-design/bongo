@@ -135,6 +135,19 @@ export default function LibraryScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>Maktaba</Text>
 
+      {/* Device Music Button */}
+      <TouchableOpacity 
+        style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, padding: 16, borderRadius: 12, marginBottom: 16, borderWidth: 1, borderColor: COLORS.divider }}
+        onPress={() => router.push('/local-music')}
+      >
+        <Ionicons name="phone-portrait-outline" size={24} color={COLORS.gold} />
+        <View style={{ flex: 1, marginLeft: 16 }}>
+          <Text style={{ color: COLORS.textPrimary, fontSize: 16, fontWeight: '700' }}>Device Music</Text>
+          <Text style={{ color: COLORS.textSecondary, fontSize: 12, marginTop: 2 }}>Play MP3s saved on your phone</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={COLORS.textTertiary} />
+      </TouchableOpacity>
+
       {/* Tabs */}
       <View style={{ marginBottom: 12 }}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>

@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, TextInput, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useThemeStore } from '../../store/themeStore';
 import { Track, Profile } from '../../constants';
@@ -14,22 +14,29 @@ export default function SearchScreen() {
   const { COLORS } = useThemeStore();
   const styles = getStyles(COLORS);
   const router = useRouter();
+  const { q } = useLocalSearchParams<{ q?: string }>();
   const playTrack = usePlayerStore(s => s.playTrack);
   const currentTrack = usePlayerStore(s => s.currentTrack);
 
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(q || '');
   const [tracks, setTracks] = useState<Track[]>([]);
   const [artists, setArtists] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const doSearch = async (q: string) => {
-    if (!q.trim()) { setTracks([]); setArtists([]); return; }
+  React.useEffect(() => {
+    if (q) {
+      doSearch(q);
+    }
+  }, [q]);
+
+  const doSearch = async (searchTerm: string) => {
+    if (!searchTerm.trim()) { setTracks([]); setArtists([]); return; }
     setLoading(true);
     const [tRes, aRes] = await Promise.all([
       supabase.from('tracks').select('*, profile:profiles!tracks_user_id_fkey(*)').eq('is_public', true)
-        .or(`title.ilike.%${q}%,artist_name.ilike.%${q}%,genre.ilike.%${q}%`).limit(30),
+        .or(`title.ilike.%${searchTerm}%,artist_name.ilike.%${searchTerm}%,genre.ilike.%${searchTerm}%`).limit(30),
       supabase.from('profiles').select('*').eq('role', 'artist')
-        .or(`display_name.ilike.%${q}%,username.ilike.%${q}%`).limit(15),
+        .or(`display_name.ilike.%${searchTerm}%,username.ilike.%${searchTerm}%`).limit(15),
     ]);
     if (tRes.data) setTracks(tRes.data as Track[]);
     if (aRes.data) setArtists(aRes.data as Profile[]);

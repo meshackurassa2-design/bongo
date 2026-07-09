@@ -95,20 +95,22 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
             const { hasCountedPlay } = get();
             if (currentTrack && !hasCountedPlay && status.positionMillis >= 30000) {
               set({ hasCountedPlay: true });
-              supabase.rpc('increment_play_count', { track_id: currentTrack.id }).then(({ error }) => {
-                if (error) console.error("Failed to increment play count:", error);
-              });
-              
-              // Record listening history (Bongo Wrapped)
-              const session = useAuthStore.getState().session;
-              if (session?.user.id) {
-                supabase.from('listening_history').insert({
-                  user_id: session.user.id,
-                  track_id: currentTrack.id,
-                  duration_listened: Math.floor((status.durationMillis || 30000) / 1000)
-                }).then(({ error }) => {
-                   if (error) console.error("Failed to log history", error);
+              if (!currentTrack.id.startsWith('local_') && !currentTrack.is_unpublished) {
+                supabase.rpc('increment_play_count', { track_id: currentTrack.id }).then(({ error }) => {
+                  if (error) console.log("Failed to increment play count:", error.message);
                 });
+              
+                // Record listening history (Bongo Wrapped)
+                const session = useAuthStore.getState().session;
+                if (session?.user.id) {
+                  supabase.from('listening_history').insert({
+                    user_id: session.user.id,
+                    track_id: currentTrack.id,
+                    duration_listened: Math.floor((status.durationMillis || 30000) / 1000)
+                  }).then(({ error }) => {
+                     if (error) console.log("Failed to log history:", error.message);
+                  });
+                }
               }
             }
 

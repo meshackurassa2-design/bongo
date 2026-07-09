@@ -91,10 +91,14 @@ export default function ProfileScreen() {
 
         <View style={styles.statsRow}>
           <StatItem label={t('profile.followers')} value={profile.follower_count || 0} styles={styles} />
-          <StatItem label={t('profile.following')} value={profile.following_count || 0} styles={styles} />
-          <StatItem label={t('profile.plays')} value={profile.total_plays || 0} styles={styles} />
           <View style={styles.statDivider} />
-          <StatItem label={t('profile.songs')} value={profile.track_count} styles={styles} />
+          <StatItem label={t('profile.following')} value={profile.following_count || 0} styles={styles} />
+          <View style={styles.statDivider} />
+          <StatItem label={t('profile.plays')} value={profile.total_plays || 0} styles={styles} />
+        </View>
+
+        <View style={[styles.statsRow, { marginTop: 12 }]}>
+          <StatItem label={t('profile.songs')} value={profile.track_count || 0} styles={styles} />
           <View style={styles.statDivider} />
           <StatItem label="Credits" value={profile.credits || 0} styles={styles} />
         </View>
@@ -121,6 +125,7 @@ export default function ProfileScreen() {
         {profile.role === 'admin' && (
           <>
             <MenuRow icon="settings" label="Admin System Settings" iconColor={COLORS.error} onPress={() => router.push('/admin/settings')} styles={styles} COLORS={COLORS} />
+            <MenuRow icon="calendar" label="Admin Panel: Manage Events" iconColor={COLORS.error} onPress={() => router.push('/admin/events')} styles={styles} COLORS={COLORS} />
             <MenuRow icon="shield-checkmark" label="Admin Panel: Manage Tickets" iconColor={COLORS.error} onPress={() => router.push('/admin/tickets')} styles={styles} COLORS={COLORS} />
             <MenuRow icon="checkmark-done-circle" label="Admin Panel: Verifications" iconColor={COLORS.error} onPress={() => router.push('/admin/verifications')} styles={styles} COLORS={COLORS} />
           </>
@@ -128,10 +133,7 @@ export default function ProfileScreen() {
         {(profile.role === 'artist' || profile.role === 'admin') && (
           <>
             <MenuRow icon="stats-chart" label="Artist Analytics Dashboard" iconColor={COLORS.gold} onPress={() => router.push('/artist/dashboard')} styles={styles} COLORS={COLORS} />
-            <MenuRow icon="wallet" label="Artist Wallet & Payouts" iconColor={COLORS.gold} onPress={() => router.push('/artist/wallet')} styles={styles} COLORS={COLORS} />
-            <MenuRow icon="briefcase" label={profile.role === 'admin' ? "AI Manager (Free)" : "AI Manager (Credits)"} iconColor={COLORS.gold} onPress={() => router.push('/artist/ai-manager')} styles={styles} COLORS={COLORS} />
             <MenuRow icon="checkmark-circle" label="Get Verified" iconColor={COLORS.gold} onPress={() => router.push('/settings/verify')} styles={styles} COLORS={COLORS} />
-            <MenuRow icon="trophy" label="Create Song Battle" iconColor={COLORS.gold} onPress={() => router.push('/artist/manage-battles')} styles={styles} COLORS={COLORS} />
           </>
         )}
         {profile.role !== 'artist' && profile.role !== 'admin' && (
@@ -146,6 +148,9 @@ export default function ProfileScreen() {
       {/* Settings section */}
       <Text style={styles.sectionTitle}>{t('profile.settings')}</Text>
       <View style={styles.settingsGroup}>
+        <MenuRow icon="ticket" label="My Event Tickets 🎟️" iconColor={COLORS.gold} onPress={() => router.push('/my-tickets')} styles={styles} COLORS={COLORS} />
+        <MenuRow icon="color-palette-outline" label="App Theme" iconColor={COLORS.gold} onPress={() => router.push('/settings/theme')} styles={styles} COLORS={COLORS} />
+        <MenuRow icon="heart" label="Pair with Partner" iconColor={COLORS.error} onPress={() => router.push('/settings/pair-partner')} styles={styles} COLORS={COLORS} />
         <MenuRow icon="notifications-outline" label={t('profile.notifications')} iconColor={COLORS.textSecondary} onPress={() => router.push('/settings/notifications')} styles={styles} COLORS={COLORS} />
         <MenuRow icon="language-outline" label={t('settings.language')} iconColor={COLORS.textSecondary} onPress={() => router.push('/settings/language')} styles={styles} COLORS={COLORS} />
         <MenuRow icon="headset-outline" label="Help & Support" iconColor={COLORS.textSecondary} onPress={() => router.push('/settings/support')} styles={styles} COLORS={COLORS} />
@@ -153,13 +158,6 @@ export default function ProfileScreen() {
       </View>
 
       <View style={[styles.settingsGroup, { marginBottom: 40, borderColor: 'rgba(255, 59, 48, 0.3)' }]}>
-        <MenuRow icon="log-out-outline" label={t('profile.sign_out')} iconColor={COLORS.error} onPress={handleSignOut} isLast styles={styles} COLORS={COLORS} />
-      </View>
-
-      {/* Theme Option */}
-      <Text style={styles.sectionTitle}>App Settings</Text>
-      <View style={[styles.settingsGroup, { marginBottom: 40 }]}>
-        <MenuRow icon="color-palette-outline" label="Theme" iconColor={COLORS.gold} onPress={() => router.push('/settings/theme')} styles={styles} COLORS={COLORS} />
         <MenuRow icon="log-out-outline" label={t('profile.sign_out')} iconColor={COLORS.error} onPress={handleSignOut} isLast styles={styles} COLORS={COLORS} />
       </View>
 

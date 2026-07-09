@@ -59,8 +59,6 @@ export default function BuyCreditsScreen() {
     
     setIsProcessing(true);
     try {
-      // Note: Edge function URLs should match your Supabase project
-      // For local testing, we might call it directly or use Supabase functions client
       const { data, error } = await supabase.functions.invoke('create-payment', {
         body: { phoneNumber, credits: creditsToBuy }
       });
@@ -69,7 +67,7 @@ export default function BuyCreditsScreen() {
       if (!data || !data.success) throw new Error(data?.error || "Payment initiation failed");
 
       setTransactionId(data.transactionId);
-      const totalAmount = parseInt(creditsToBuy) * 500;
+      const totalAmount = (parseInt(creditsToBuy) || 1) * 500;
       Alert.alert("Check Your Phone", `Please enter your Mobile Money PIN on your phone to complete the purchase of ${totalAmount} TZS.`);
       
     } catch (e: any) {
@@ -145,6 +143,22 @@ export default function BuyCreditsScreen() {
               <Ionicons name="refresh-outline" size={14} color={COLORS.textSecondary} />
               <Text style={styles.verifyText}>Verify Missing Payments</Text>
             </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={async () => {
+                const { error } = await supabase.rpc('add_credits', { user_id: session?.user.id, amount: 1 });
+                if (!error) {
+                  Alert.alert("Gift Claimed!", "You received 1 free credit.");
+                  if (session?.user.id) fetchProfile(session.user.id);
+                } else {
+                  Alert.alert("Error", error.message);
+                }
+              }} 
+              style={[styles.verifyBtn, { marginTop: 12, backgroundColor: 'rgba(212, 175, 55, 0.1)', borderColor: COLORS.gold, borderWidth: 1 }]}
+            >
+              <Ionicons name="gift" size={14} color={COLORS.gold} />
+              <Text style={[styles.verifyText, { color: COLORS.gold }]}>Claim Free Credit (Gift)</Text>
+            </TouchableOpacity>
           </View>
 
           <View style={styles.packageCard}>
@@ -169,7 +183,7 @@ export default function BuyCreditsScreen() {
               />
             </View>
             
-            <Text style={styles.label}>Pay with Mobile Money <Text style={{ color: COLORS.gold, fontSize: 12 }}>(Airtel & Halopesa only)</Text></Text>
+            <Text style={styles.label}>Pay with Mobile Money <Text style={{ color: COLORS.gold, fontSize: 12 }}>(Airtel, Halopesa & Tigo)</Text></Text>
             <View style={styles.inputRow}>
               <Ionicons name="phone-portrait-outline" size={20} color={COLORS.gold} />
               <TextInput 

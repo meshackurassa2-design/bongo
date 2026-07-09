@@ -169,7 +169,7 @@ export default function UploadScreen() {
       </TouchableOpacity>
 
       {/* Form fields */}
-      <BongoInput label="Jina la Wimbo *" value={title} onChangeText={setTitle} placeholder="Andika jina la wimbo..." />
+      <BongoInput styles={styles} COLORS={COLORS} label="Jina la Wimbo *" value={title} onChangeText={setTitle} placeholder="Andika jina la wimbo..." />
       
       <View>
         <Text style={styles.fieldLabel}>Msanii Mkuu *</Text>
@@ -180,9 +180,9 @@ export default function UploadScreen() {
         />
       </View>
       
-      <BongoInput label="Mshirikishi (Collabo) (Hiari)" value={collaborator} onChangeText={setCollaborator} placeholder="Mfn. Diamond Platnumz" />
+      <BongoInput styles={styles} COLORS={COLORS} label="Mshirikishi (Collabo) (Hiari)" value={collaborator} onChangeText={setCollaborator} placeholder="Mfn. Diamond Platnumz" />
       
-      <BongoInput label="Maelezo (Hiari)" value={description} onChangeText={setDescription} placeholder="Maelezo mafupi..." multiline />
+      <BongoInput styles={styles} COLORS={COLORS} label="Maelezo (Hiari)" value={description} onChangeText={setDescription} placeholder="Maelezo mafupi..." multiline />
 
       {/* Genre picker */}
       <Text style={styles.fieldLabel}>Aina ya Muziki</Text>
@@ -231,7 +231,7 @@ export default function UploadScreen() {
   );
 }
 
-function BongoInput({ label, value, onChangeText, placeholder, multiline }: { label: string; value: string; onChangeText: (t: string) => void; placeholder: string; multiline?: boolean }) {
+function BongoInput({ label, value, onChangeText, placeholder, multiline, styles, COLORS }: { label: string; value: string; onChangeText: (t: string) => void; placeholder: string; multiline?: boolean; styles: any; COLORS: any }) {
   return (
     <View>
       <Text style={styles.fieldLabel}>{label}</Text>

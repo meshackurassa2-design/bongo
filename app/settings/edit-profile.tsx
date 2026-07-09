@@ -73,7 +73,7 @@ export default function EditProfileSettings() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 100 }}>
-      <Stack.Screen options={{ title: t('profile.edit_profile'), headerShown: true, headerStyle: { backgroundColor: COLORS.black }, headerTintColor: COLORS.gold, headerBackTitleVisible: false, headerBackTitle: ' ' }} />
+      <Stack.Screen options={{ title: t('profile.edit_profile'), headerShown: true, headerStyle: { backgroundColor: COLORS.black }, headerTintColor: COLORS.gold, headerBackTitle: ' ' }} />
       
       <View style={{ alignItems: 'center', marginVertical: 20 }}>
         <TouchableOpacity onPress={handlePickImage} disabled={saving}>

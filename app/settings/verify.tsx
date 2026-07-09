@@ -80,7 +80,7 @@ export default function VerifyScreen() {
   if (fetching) {
     return (
       <View style={styles.center}>
-        <Stack.Screen options={{ title: 'Get Verified', headerShown: true, headerStyle: { backgroundColor: COLORS.black }, headerTintColor: COLORS.gold, headerBackTitleVisible: false }} />
+        <Stack.Screen options={{ title: 'Get Verified', headerShown: true, headerStyle: { backgroundColor: COLORS.black }, headerTintColor: COLORS.gold, }} />
         <ActivityIndicator color={COLORS.gold} size="large" />
       </View>
     );
@@ -89,7 +89,7 @@ export default function VerifyScreen() {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView style={styles.container} contentContainerStyle={{ padding: 24, paddingBottom: 50 }}>
-        <Stack.Screen options={{ title: 'Get Verified', headerShown: true, headerStyle: { backgroundColor: COLORS.black }, headerTintColor: COLORS.gold, headerBackTitleVisible: false }} />
+        <Stack.Screen options={{ title: 'Get Verified', headerShown: true, headerStyle: { backgroundColor: COLORS.black }, headerTintColor: COLORS.gold, }} />
         
         <View style={styles.headerArea}>
           <Ionicons name="checkmark-circle" size={80} color={COLORS.gold} />

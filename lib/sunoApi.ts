@@ -1,18 +1,22 @@
 import { supabase } from './supabase';
 
-const BASE_URL = 'https://api.sunoapi.org/api/v1';
+export const getApiConfig = async (): Promise<{ provider: 'suno' | 'kie', apiKey: string, baseUrl: string }> => {
+  const [providerRes, sunoKeyRes, kieKeyRes] = await Promise.all([
+    supabase.from('system_settings').select('value').eq('key', 'ai_api_provider').single(),
+    supabase.from('system_settings').select('value').eq('key', 'suno_api_key').single(),
+    supabase.from('system_settings').select('value').eq('key', 'kie_api_key').single()
+  ]);
 
-export const getDynamicApiKey = async (): Promise<string> => {
-  const { data, error } = await supabase
-    .from('system_settings')
-    .select('value')
-    .eq('key', 'suno_api_key')
-    .single();
-    
-  if (error || !data) {
-    throw new Error("Could not retrieve Suno API key from system settings.");
+  const provider = (providerRes.data?.value as 'suno' | 'kie') || 'suno';
+  const apiKey = provider === 'kie' ? kieKeyRes.data?.value : sunoKeyRes.data?.value;
+
+  if (!apiKey) {
+    throw new Error(`Could not retrieve API key for ${provider.toUpperCase()}`);
   }
-  return data.value;
+
+  const baseUrl = provider === 'kie' ? 'https://api.kie.ai/api/v1' : 'https://api.sunoapi.org/api/v1';
+
+  return { provider, apiKey, baseUrl };
 };
 
 export type SunoTaskStatus = 'PENDING' | 'PROCESSING' | 'SUCCESS' | 'FAILED' | 'SENSITIVE_WORD_ERROR';
@@ -42,7 +46,8 @@ export const generateMusic = async (
   uploadUrl?: string,
   vocalGender?: 'Male' | 'Female' | 'Any',
   weirdness?: number,
-  styleInfluence?: number
+  styleInfluence?: number,
+  personaId?: string
 ): Promise<string> => {
   // Append vocal gender to tags if selected
   let finalTags = tags;
@@ -65,9 +70,9 @@ export const generateMusic = async (
   if (typeof weirdness === 'number') payload.weirdness = weirdness;
   if (typeof styleInfluence === 'number') payload.style_influence = styleInfluence;
 
-  const apiKey = await getDynamicApiKey();
-  
-  const response = await fetch(`${BASE_URL}/generate`, {
+  const { provider, apiKey, baseUrl } = await getApiConfig();
+
+  const response = await fetch(`${baseUrl}/generate`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -99,10 +104,58 @@ export const generateMusic = async (
   return taskId;
 };
 
-export const getTaskInfo = async (taskId: string): Promise<SunoTaskResponse> => {
-  const apiKey = await getDynamicApiKey();
+export const separateVocals = async (taskId: string, audioId: string): Promise<string> => {
+  const { provider, apiKey, baseUrl } = await getApiConfig();
   
-  const response = await fetch(`${BASE_URL}/generate/record-info?taskId=${taskId}`, {
+  let endpoint = `${baseUrl}/separate-vocals`;
+  let payload: any = { audioId };
+  
+  if (provider === 'kie') {
+    endpoint = `${baseUrl}/vocal-removal/generate`;
+    payload = {
+      taskId,
+      audioId,
+      type: 'separate_vocal',
+      callBackUrl: 'https://bongo-stream.com/callback'
+    };
+  }
+  
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to separate vocals: ${response.status} ${errorText}`);
+  }
+
+  const json = await response.json();
+  
+  let resultTaskId;
+  if (typeof json.data === 'string') {
+    resultTaskId = json.data;
+  } else if (json.data && json.data.taskId) {
+    resultTaskId = json.data.taskId;
+  } else {
+    resultTaskId = json.taskId;
+  }
+  
+  if (!resultTaskId) {
+     console.error("Suno API full response:", json);
+     throw new Error(json.msg || "No taskId returned.");
+  }
+  return resultTaskId;
+};
+
+export const getTaskInfo = async (taskId: string): Promise<SunoTaskResponse> => {
+  const { provider, apiKey, baseUrl } = await getApiConfig();
+  
+  const response = await fetch(`${baseUrl}/generate/record-info?taskId=${taskId}`, {
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
@@ -121,6 +174,66 @@ export const getTaskInfo = async (taskId: string): Promise<SunoTaskResponse> => 
   }
 
   const taskData = json.data;
+  const status = taskData.successFlag || taskData.status || 'PENDING';
+  
+  let mappedData: SunoAudioData[] = [];
+  if (provider === 'kie' && taskData.response) {
+    if (taskData.response.vocalUrl) {
+      mappedData.push({
+        id: `${taskData.taskId}-vocal`,
+        title: 'Isolated Vocals',
+        imageUrl: 'https://via.placeholder.com/150/8A2BE2/FFFFFF?text=Vocals',
+        audioUrl: taskData.response.vocalUrl,
+        videoUrl: ''
+      });
+    }
+    if (taskData.response.instrumentalUrl) {
+      mappedData.push({
+        id: `${taskData.taskId}-inst`,
+        title: 'Isolated Instrumental',
+        imageUrl: 'https://via.placeholder.com/150/4169E1/FFFFFF?text=Instrumental',
+        audioUrl: taskData.response.instrumentalUrl,
+        videoUrl: ''
+      });
+    }
+  } else {
+    mappedData = taskData.response?.sunoData || [];
+  }
+
+  return {
+    taskId: taskData.taskId,
+    status: status,
+    data: mappedData,
+  };
+};
+
+export const getVocalRemovalInfo = async (taskId: string): Promise<SunoTaskResponse> => {
+  const { provider, apiKey, baseUrl } = await getApiConfig();
+  
+  let endpoint = `${baseUrl}/generate/record-info?taskId=${taskId}`;
+  if (provider === 'kie') {
+    endpoint = `${baseUrl}/vocal-removal/record-info?taskId=${taskId}`;
+  }
+
+  const response = await fetch(endpoint, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to fetch vocal removal info: ${response.status} ${errorText}`);
+  }
+
+  const json = await response.json();
+  
+  if (json.code !== 200 || !json.data) {
+    throw new Error(json.msg || "Failed to fetch vocal removal info");
+  }
+
+  const taskData = json.data;
   return {
     taskId: taskData.taskId,
     status: taskData.status,
@@ -129,9 +242,9 @@ export const getTaskInfo = async (taskId: string): Promise<SunoTaskResponse> => 
 };
 
 export const getApiCreditBalance = async (): Promise<number> => {
-  const apiKey = await getDynamicApiKey();
+  const { provider, apiKey, baseUrl } = await getApiConfig();
   
-  const response = await fetch(`${BASE_URL}/generate/credit`, {
+  const response = await fetch(`${baseUrl}/generate/credit`, {
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
@@ -156,9 +269,9 @@ export const generatePersona = async (
   name: string,
   description: string
 ): Promise<string> => {
-  const apiKey = await getDynamicApiKey();
+  const { provider, apiKey, baseUrl } = await getApiConfig();
   
-  const response = await fetch(`${BASE_URL}/generate/generate-persona`, {
+  const response = await fetch(`${baseUrl}/generate/generate-persona`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -192,20 +305,22 @@ export const uploadAndCoverAudio = async (
   audioId?: string,
   audioUrl?: string
 ): Promise<string> => {
-  const apiKey = await getDynamicApiKey();
+  const { provider, apiKey, baseUrl } = await getApiConfig();
   
   const payload: any = {
     prompt,
     style,
     title,
     personaId,
+    customMode: true,
+    instrumental: false,
     callBackUrl: "https://httpbin.org/post",
   };
   
   if (audioId) payload.audioId = audioId;
   if (audioUrl) payload.audioUrl = audioUrl;
 
-  const response = await fetch(`${BASE_URL}/generate/upload-cover`, {
+  const response = await fetch(`${baseUrl}/generate/upload-cover`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -249,8 +364,8 @@ export const generateVoiceValidation = async (
   language: string = 'en',
   callBackUrl?: string
 ): Promise<string> => {
-  const apiKey = await getDynamicApiKey();
-  const response = await fetch(`${BASE_URL}/voice/validate`, {
+  const { provider, apiKey, baseUrl } = await getApiConfig();
+  const response = await fetch(`${baseUrl}/voice/validate`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -277,8 +392,8 @@ export const generateVoiceValidation = async (
 };
 
 export const getVoiceValidationInfo = async (taskId: string): Promise<any> => {
-  const apiKey = await getDynamicApiKey();
-  const response = await fetch(`${BASE_URL}/voice/validate-info?taskId=${taskId}`, {
+  const { provider, apiKey, baseUrl } = await getApiConfig();
+  const response = await fetch(`${baseUrl}/voice/validate-info?taskId=${taskId}`, {
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
@@ -305,8 +420,8 @@ export const createCustomVoice = async (
   singerSkillLevel: string = 'beginner',
   callBackUrl?: string
 ): Promise<string> => {
-  const apiKey = await getDynamicApiKey();
-  const response = await fetch(`${BASE_URL}/voice/generate`, {
+  const { provider, apiKey, baseUrl } = await getApiConfig();
+  const response = await fetch(`${baseUrl}/voice/generate`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -335,8 +450,8 @@ export const createCustomVoice = async (
 };
 
 export const getCustomVoiceRecord = async (taskId: string): Promise<any> => {
-  const apiKey = await getDynamicApiKey();
-  const response = await fetch(`${BASE_URL}/voice/record-info?taskId=${taskId}`, {
+  const { provider, apiKey, baseUrl } = await getApiConfig();
+  const response = await fetch(`${baseUrl}/voice/record-info?taskId=${taskId}`, {
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
@@ -361,13 +476,13 @@ export const generateSounds = async (
   tempo?: string,
   key?: string
 ): Promise<string> => {
-  const apiKey = await getDynamicApiKey();
+  const { provider, apiKey, baseUrl } = await getApiConfig();
   const payload: any = { prompt };
   if (loop) payload.loop = loop;
   if (tempo) payload.tempo = tempo;
   if (key) payload.key = key;
   
-  const response = await fetch(`${BASE_URL}/generate/sounds`, {
+  const response = await fetch(`${baseUrl}/generate/sounds`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -396,7 +511,7 @@ export const createMusicVideo = async (
   author?: string,
   domainName?: string
 ): Promise<string> => {
-  const apiKey = await getDynamicApiKey();
+  const { provider, apiKey, baseUrl } = await getApiConfig();
   const payload: any = { 
     taskId, 
     audioId,
@@ -405,7 +520,7 @@ export const createMusicVideo = async (
   if (author) payload.author = author;
   if (domainName) payload.domainName = domainName;
   
-  const response = await fetch(`${BASE_URL}/mp4/generate`, {
+  const response = await fetch(`${baseUrl}/mp4/generate`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -428,8 +543,8 @@ export const createMusicVideo = async (
 };
 
 export const getVideoRecordInfo = async (taskId: string): Promise<any> => {
-  const apiKey = await getDynamicApiKey();
-  const response = await fetch(`${BASE_URL}/mp4/record-info?taskId=${taskId}`, {
+  const { provider, apiKey, baseUrl } = await getApiConfig();
+  const response = await fetch(`${baseUrl}/mp4/record-info?taskId=${taskId}`, {
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${apiKey}`,

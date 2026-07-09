@@ -10,6 +10,9 @@ import * as Sharing from 'expo-sharing';
 import { usePlayerStore } from '../store/playerStore';
 import { useOfflineStore } from '../store/offlineStore';
 import { useThemeStore } from '../store/themeStore';
+import { useAuthStore } from '../store/authStore';
+import { supabase } from '../lib/supabase';
+import { ScrollView } from 'react-native';
 
 
 const { width } = Dimensions.get('window');
@@ -44,6 +47,42 @@ export default function PlayerScreen() {
   const [showFxModal, setShowFxModal] = useState(false);
   const [timeLeft, setTimeLeft] = useState<string | null>(null);
   const [isSharing, setIsSharing] = useState(false);
+  const session = useAuthStore(s => s.session);
+  const [showPlaylistModal, setShowPlaylistModal] = useState(false);
+  const [myPlaylists, setMyPlaylists] = useState<any[]>([]);
+  const [loadingPlaylists, setLoadingPlaylists] = useState(false);
+
+  const openPlaylistModal = async () => {
+    if (!session) {
+      Alert.alert('Login Required', 'You must be logged in to add songs to a playlist.');
+      router.push('/auth');
+      return;
+    }
+    setShowPlaylistModal(true);
+    setLoadingPlaylists(true);
+    const { data } = await supabase.from('playlists').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false });
+    if (data) setMyPlaylists(data);
+    setLoadingPlaylists(false);
+  };
+
+  const addToPlaylist = async (playlistId: string) => {
+    const { error } = await supabase.from('playlist_tracks').insert({
+      playlist_id: playlistId,
+      track_id: currentTrack?.id
+    });
+    if (error) {
+      if (error.code === '23505') Alert.alert('Notice', 'Song is already in this playlist!');
+      else Alert.alert('Error', error.message);
+    } else {
+      Alert.alert('Success', 'Song added to playlist!');
+      setShowPlaylistModal(false);
+      
+      const pl = myPlaylists.find(p => p.id === playlistId);
+      if (pl) {
+        await supabase.from('playlists').update({ track_count: (pl.track_count || 0) + 1 }).eq('id', playlistId);
+      }
+    }
+  };
 
   // Animation values
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -195,6 +234,9 @@ export default function PlayerScreen() {
           </TouchableOpacity>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <TouchableOpacity style={styles.downloadBtn} onPress={openPlaylistModal}>
+            <Ionicons name="list" size={26} color={COLORS.textSecondary} />
+          </TouchableOpacity>
           <TouchableOpacity style={styles.downloadBtn} onPress={handleShare}>
             {isSharing ? <ActivityIndicator size="small" color={COLORS.textPrimary} /> : <Ionicons name="share-social-outline" size={26} color={COLORS.textSecondary} />}
           </TouchableOpacity>
@@ -364,6 +406,33 @@ export default function PlayerScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Playlist Selection Modal */}
+      <Modal visible={showPlaylistModal} transparent={true} animationType="slide" onRequestClose={() => setShowPlaylistModal(false)}>
+        <View style={styles.modalBg}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Add to Playlist</Text>
+            {loadingPlaylists ? (
+              <ActivityIndicator color={COLORS.gold} style={{ marginVertical: 40 }} />
+            ) : myPlaylists.length === 0 ? (
+              <Text style={{ color: COLORS.textSecondary, marginVertical: 20, textAlign: 'center' }}>You don't have any playlists yet.</Text>
+            ) : (
+              <ScrollView style={{ maxHeight: 300, width: '100%', marginTop: 20 }}>
+                {myPlaylists.map(pl => (
+                  <TouchableOpacity key={pl.id} style={styles.playlistOption} onPress={() => addToPlaylist(pl.id)}>
+                    <Ionicons name="musical-notes" size={24} color={COLORS.gold} />
+                    <Text style={styles.playlistOptionText}>{pl.title}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+            <TouchableOpacity style={styles.closeModalBtn} onPress={() => setShowPlaylistModal(false)}>
+              <Text style={styles.closeModalText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
     </LinearGradient>
   );
 }
@@ -398,5 +467,7 @@ const getStyles = (COLORS: any) => StyleSheet.create({
   sleepOptionBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: COLORS.cardAlt, padding: 16, borderRadius: 16, borderWidth: 1, borderColor: COLORS.divider },
   sleepOptionText: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '600' },
   closeModalBtn: { marginTop: 24, padding: 16, borderRadius: 16, alignItems: 'center' },
-  closeModalText: { color: COLORS.textSecondary, fontSize: 16, fontWeight: '700' },
+  closeModalText: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '700' },
+  playlistOption: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.cardAlt, padding: 16, borderRadius: 12, marginBottom: 12, width: '100%', gap: 12 },
+  playlistOptionText: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '700' },
 });

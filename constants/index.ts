@@ -13,6 +13,9 @@ export const THEMES = {
     textTertiary: '#6B6B80',
     divider: '#2A2A38',
     error: '#FF5252',
+    white: '#FFFFFF',
+    success: '#1DB954',
+    transparent: 'transparent',
   },
   love: {
     black: '#140A0D',
@@ -28,6 +31,9 @@ export const THEMES = {
     textTertiary: '#997A85',
     divider: '#401C27',
     error: '#FF5252',
+    white: '#FFFFFF',
+    success: '#1DB954',
+    transparent: 'transparent',
   },
   ocean: {
     black: '#050A14',
@@ -43,6 +49,45 @@ export const THEMES = {
     textTertiary: '#6B8EAD',
     divider: '#1A3366',
     error: '#FF5252',
+    white: '#FFFFFF',
+    success: '#1DB954',
+    transparent: 'transparent',
+  },
+  cyberpunk: {
+    black: '#090514',
+    darkSurface: '#120A2B',
+    card: '#1F1147',
+    cardAlt: '#2C1863',
+    gold: '#FF00FF', // Neon Magenta
+    goldLight: '#FF66FF',
+    goldDark: '#B300B3',
+    green: '#00FFCC', // Cyan accent
+    textPrimary: '#FFFFFF',
+    textSecondary: '#D1B3FF',
+    textTertiary: '#A366FF',
+    divider: '#3A1F80',
+    error: '#FF3366',
+    white: '#FFFFFF',
+    success: '#00FFCC',
+    transparent: 'transparent',
+  },
+  forest: {
+    black: '#0A120D',
+    darkSurface: '#0E1A13',
+    card: '#142B1D',
+    cardAlt: '#1A3D28',
+    gold: '#4CAF50', // Leaf Green
+    goldLight: '#81C784',
+    goldDark: '#388E3C',
+    green: '#2E7D32',
+    textPrimary: '#FFFFFF',
+    textSecondary: '#A5D6A7',
+    textTertiary: '#66BB6A',
+    divider: '#1B4D2A',
+    error: '#FF5252',
+    white: '#FFFFFF',
+    success: '#4CAF50',
+    transparent: 'transparent',
   }
 };
 
@@ -92,6 +137,7 @@ export type Profile = {
   following_count: number;
   track_count: number;
   credits: number;
+  partner_id?: string;
 };
 
 export type Comment = {

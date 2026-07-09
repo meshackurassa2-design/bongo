@@ -59,6 +59,13 @@ export default function PlaylistScreen() {
     setColabModalVisible(true);
   };
 
+  const togglePrivacy = async () => {
+    if (session?.user.id !== playlist.user_id) return;
+    const newStatus = !playlist.is_public;
+    setPlaylist({ ...playlist, is_public: newStatus });
+    await supabase.from('playlists').update({ is_public: newStatus }).eq('id', id);
+  };
+
   if (loading) return <View style={styles.loader}><ActivityIndicator color={COLORS.gold} size="large" /></View>;
   if (!playlist) return <View style={styles.loader}><Text style={{color: '#fff'}}>Playlist not found</Text></View>;
 
@@ -93,10 +100,18 @@ export default function PlaylistScreen() {
               <Text style={styles.name}>{playlist.title}</Text>
             </View>
             
-            <View style={styles.privacyBadge}>
-              <Ionicons name={playlist.is_public ? "earth" : "lock-closed"} size={14} color={COLORS.gold} />
-              <Text style={styles.privacyText}>{playlist.is_public ? 'Public Playlist' : 'Private Playlist'}</Text>
-            </View>
+            <TouchableOpacity 
+              style={[styles.privacyBadge, !isOwner && { opacity: 0.7 }]}
+              onPress={togglePrivacy}
+              disabled={!isOwner}
+              activeOpacity={0.7}
+            >
+              <Ionicons name={playlist.is_public ? "globe-outline" : "lock-closed-outline"} size={16} color={COLORS.gold} />
+              <Text style={styles.privacyText}>
+                {playlist.is_public ? 'Public Playlist' : 'Private Playlist'} 
+                {isOwner && <Text style={{ color: COLORS.textSecondary, fontSize: 10 }}> (Tap to change)</Text>}
+              </Text>
+            </TouchableOpacity>
             
             <Text style={styles.stats}>Created by {playlist.profile?.display_name || 'Unknown'}</Text>
 

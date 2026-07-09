@@ -85,12 +85,12 @@ export default function AuthScreen() {
         {/* Sign Up fields */}
         {mode === 'signup' && (
           <>
-            <Field label="Jina Kamili" value={displayName} onChange={setDisplayName} placeholder="Jina lako..." icon="person-outline" />
-            <Field label="Jina la Mtumiaji" value={username} onChange={t => setUsername(t.toLowerCase())} placeholder="@username" icon="at-outline" />
+            <Field styles={styles} COLORS={COLORS} label="Jina Kamili" value={displayName} onChange={setDisplayName} placeholder="Jina lako..." icon="person-outline" />
+            <Field styles={styles} COLORS={COLORS} label="Jina la Mtumiaji" value={username} onChange={t => setUsername(t.toLowerCase())} placeholder="@username" icon="at-outline" />
           </>
         )}
 
-        <Field label={mode === 'login' ? "Barua Pepe au Jina la Mtumiaji" : "Barua Pepe"} value={email} onChange={setEmail} placeholder={mode === 'login' ? "mfano@gmail.com au @username" : "mfano@gmail.com"} icon={mode === 'login' ? "person-outline" : "mail-outline"} keyboardType={mode === 'login' ? "default" : "email-address"} autoCapitalize="none" />
+        <Field styles={styles} COLORS={COLORS} label={mode === 'login' ? "Barua Pepe au Jina la Mtumiaji" : "Barua Pepe"} value={email} onChange={setEmail} placeholder={mode === 'login' ? "mfano@gmail.com au @username" : "mfano@gmail.com"} icon={mode === 'login' ? "person-outline" : "mail-outline"} keyboardType={mode === 'login' ? "default" : "email-address"} autoCapitalize="none" />
 
         {/* Password */}
         <Text style={styles.fieldLabel}>Nywila</Text>
@@ -179,7 +179,7 @@ export default function AuthScreen() {
   );
 }
 
-function Field({ label, value, onChange, placeholder, icon, keyboardType }: any) {
+function Field({ label, styles, COLORS, value, onChange, placeholder, icon, keyboardType }: any) {
   return (
     <View>
       <Text style={styles.fieldLabel}>{label}</Text>
