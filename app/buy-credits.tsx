@@ -144,21 +144,23 @@ export default function BuyCreditsScreen() {
               <Text style={styles.verifyText}>Verify Missing Payments</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              onPress={async () => {
-                const { error } = await supabase.rpc('add_credits', { user_id: session?.user.id, amount: 1 });
-                if (!error) {
-                  Alert.alert("Gift Claimed!", "You received 1 free credit.");
-                  if (session?.user.id) fetchProfile(session.user.id);
-                } else {
-                  Alert.alert("Error", error.message);
-                }
-              }} 
-              style={[styles.verifyBtn, { marginTop: 12, backgroundColor: 'rgba(212, 175, 55, 0.1)', borderColor: COLORS.gold, borderWidth: 1 }]}
-            >
-              <Ionicons name="gift" size={14} color={COLORS.gold} />
-              <Text style={[styles.verifyText, { color: COLORS.gold }]}>Claim Free Credit (Gift)</Text>
-            </TouchableOpacity>
+            {profile?.role === 'admin' && (
+              <TouchableOpacity 
+                onPress={async () => {
+                  const { error } = await supabase.rpc('add_credits', { user_id: session?.user.id, amount: 1 });
+                  if (!error) {
+                    Alert.alert("Gift Claimed!", "You received 1 free credit.");
+                    if (session?.user.id) fetchProfile(session.user.id);
+                  } else {
+                    Alert.alert("Error", error.message);
+                  }
+                }} 
+                style={[styles.verifyBtn, { marginTop: 12, backgroundColor: 'rgba(212, 175, 55, 0.1)', borderColor: COLORS.gold, borderWidth: 1 }]}
+              >
+                <Ionicons name="gift" size={14} color={COLORS.gold} />
+                <Text style={[styles.verifyText, { color: COLORS.gold }]}>Claim Free Credit (Gift)</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           <View style={styles.packageCard}>
