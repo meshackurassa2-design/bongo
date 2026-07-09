@@ -29,8 +29,8 @@ jobs:
       - name: Build Unsigned App
         run: |
           cd ios
-          WORKSPACE=$(ls *.xcworkspace | head -1)
-          SCHEME=$(xcodebuild -workspace "$WORKSPACE" -list | grep -A 1 'Information about project' | tail -1 | xargs)
+          WORKSPACE=$(ls -d *.xcworkspace | head -n 1)
+          SCHEME=$(basename "$WORKSPACE" .xcworkspace)
           echo "Building Workspace: $WORKSPACE, Scheme: $SCHEME"
           xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" -configuration Release -sdk iphoneos -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
           
