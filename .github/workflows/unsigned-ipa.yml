@@ -29,23 +29,28 @@ jobs:
       - name: Build Unsigned App
         run: |
           cd ios
-          # Ensure Xcode can find the Node.js binary and has enough memory
+          
+          # 1. Forcefully symlink node to /usr/local/bin/node to bypass Xcode's strict environment stripping
+          sudo ln -s $(which node) /usr/local/bin/node || true
+          
+          # 2. Ensure Xcode can find the Node.js binary and has enough memory + openssl compat
           NODE_PATH=$(which node)
           echo "export NODE_BINARY=$NODE_PATH" >> .xcode.env.local
           echo "export PATH=$(dirname $NODE_PATH):\$PATH" >> .xcode.env.local
-          echo "export NODE_OPTIONS=\"--max-old-space-size=8192\"" >> .xcode.env.local
+          echo "export NODE_OPTIONS=\"--max-old-space-size=8192 --openssl-legacy-provider\"" >> .xcode.env.local
           cat .xcode.env.local
           
-          # Force completely disable code signing for all Pods using Node.js to avoid BSD sed issues
+          # 3. Force completely disable code signing for all Pods using Node.js to avoid BSD sed issues
           node -e "const fs = require('fs'); let podfile = fs.readFileSync('Podfile', 'utf8'); podfile = podfile.replace('react_native_post_install(installer)', 'react_native_post_install(installer)\\n    installer.pods_project.targets.each do |target|\\n      target.build_configurations.each do |config|\\n        config.build_settings[\\'CODE_SIGNING_ALLOWED\\'] = \\'NO\\'\\n        config.build_settings[\\'CODE_SIGNING_REQUIRED\\'] = \\'NO\\'\\n      end\\n    end'); fs.writeFileSync('Podfile', podfile);"
           
-          # Re-run pod install to apply the new post-install hook
+          # 4. Re-run pod install to apply the new post-install hook
           pod install
           
+          # 5. Build the app, dumping logs if it fails
           WORKSPACE=$(ls -d *.xcworkspace | head -n 1)
           SCHEME=$(basename "$WORKSPACE" .xcworkspace)
           echo "Building Workspace: $WORKSPACE, Scheme: $SCHEME"
-          xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" -configuration Release -sdk iphoneos -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" || exit 1
+          xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" -configuration Release -sdk iphoneos -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" || { echo "Xcodebuild failed! Checking for bundle logs..."; cat /tmp/react-native-*.log || true; exit 1; }
           
       - name: Package IPA
         run: |
