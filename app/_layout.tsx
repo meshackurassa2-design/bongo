@@ -13,11 +13,12 @@ import '../i18n';
 LogBox.ignoreLogs(['TypeError: Network request failed']);
 
 import TrackPlayer from 'react-native-track-player';
+import playbackService from '../service';
 try {
-  TrackPlayer.registerPlaybackService(() => require('../service'));
-} catch (e) {}
-
-
+  TrackPlayer.registerPlaybackService(() => playbackService);
+} catch (e) {
+  console.log("TrackPlayer service registration failed", e);
+}
 
 const customTheme = {
   ...DarkTheme,
