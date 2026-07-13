@@ -13,7 +13,7 @@ import { useThemeStore } from '../store/themeStore';
 import { useAuthStore } from '../store/authStore';
 import { supabase } from '../lib/supabase';
 import { ScrollView } from 'react-native';
-import { useProgress, usePlaybackState, State } from 'react-native-track-player';
+import { useProgress, usePlaybackState, State } from '../store/playerStore';
 
 
 const { width } = Dimensions.get('window');
@@ -68,6 +68,8 @@ export default function PlayerScreen() {
     setLoadingPlaylists(false);
   };
 
+
+
   const addToPlaylist = async (playlistId: string) => {
     const { error } = await supabase.from('playlist_tracks').insert({
       playlist_id: playlistId,
@@ -118,17 +120,20 @@ export default function PlayerScreen() {
     if (!currentTrack) return;
     setIsSharing(true);
     try {
-      if (currentTrack.is_ai) {
-        // AI songs: share the actual audio file so anyone can listen without the app
-        const localUri = FileSystem.cacheDirectory + `${currentTrack.id}.mp3`;
-        const fileInfo = await FileSystem.getInfoAsync(localUri);
-        if (!fileInfo.exists) {
-          await FileSystem.downloadAsync(currentTrack.audio_url, localUri);
+      if (currentTrack.is_ai || currentTrack.audio_url?.startsWith('file://')) {
+        let localUri = currentTrack.audio_url;
+        if (!localUri?.startsWith('file://')) {
+          localUri = FileSystem.cacheDirectory + `${currentTrack.id}.mp3`;
+          const fileInfo = await FileSystem.getInfoAsync(localUri);
+          if (!fileInfo.exists) {
+            await FileSystem.downloadAsync(currentTrack.audio_url, localUri);
+          }
         }
         if (await Sharing.isAvailableAsync()) {
           await Sharing.shareAsync(localUri, {
-            dialogTitle: `Share AI Song: ${currentTrack.title}`,
+            dialogTitle: `Share Song: ${currentTrack.title}`,
             mimeType: 'audio/mpeg',
+            UTI: 'public.mp3'
           });
         } else {
           Alert.alert('Error', 'Sharing is not available on this device.');

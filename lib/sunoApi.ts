@@ -196,6 +196,9 @@ export const getTaskInfo = async (taskId: string): Promise<SunoTaskResponse> => 
         videoUrl: ''
       });
     }
+    if (mappedData.length === 0) {
+      mappedData = taskData.response.sunoData || [];
+    }
   } else {
     mappedData = taskData.response?.sunoData || [];
   }
@@ -234,10 +237,39 @@ export const getVocalRemovalInfo = async (taskId: string): Promise<SunoTaskRespo
   }
 
   const taskData = json.data;
+  const status = taskData.successFlag || taskData.status || 'PENDING';
+  
+  let mappedData: SunoAudioData[] = [];
+  if (provider === 'kie' && taskData.response) {
+    if (taskData.response.vocalUrl) {
+      mappedData.push({
+        id: `${taskData.taskId}-vocal`,
+        title: 'Isolated Vocals',
+        imageUrl: 'https://via.placeholder.com/150/8A2BE2/FFFFFF?text=Vocals',
+        audioUrl: taskData.response.vocalUrl,
+        videoUrl: ''
+      });
+    }
+    if (taskData.response.instrumentalUrl) {
+      mappedData.push({
+        id: `${taskData.taskId}-inst`,
+        title: 'Isolated Instrumental',
+        imageUrl: 'https://via.placeholder.com/150/4169E1/FFFFFF?text=Instrumental',
+        audioUrl: taskData.response.instrumentalUrl,
+        videoUrl: ''
+      });
+    }
+    if (mappedData.length === 0) {
+      mappedData = taskData.response.sunoData || [];
+    }
+  } else {
+    mappedData = taskData.response?.sunoData || [];
+  }
+
   return {
     taskId: taskData.taskId,
-    status: taskData.status,
-    data: taskData.response?.sunoData || [],
+    status: status,
+    data: mappedData,
   };
 };
 

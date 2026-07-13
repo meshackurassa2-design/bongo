@@ -17,6 +17,8 @@ try {
   TrackPlayer.registerPlaybackService(() => require('../service'));
 } catch (e) {}
 
+
+
 const customTheme = {
   ...DarkTheme,
   colors: {

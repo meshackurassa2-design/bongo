@@ -27,6 +27,7 @@
     "expo-sharing": "~14.0.8",
     "expo-status-bar": "~3.0.9",
     "i18next": "^26.3.4",
+    "patch-package": "^8.0.1",
     "react": "19.1.0",
     "react-i18next": "^17.0.8",
     "react-native": "^0.81.5",
@@ -38,8 +39,7 @@
     "react-native-track-player": "^4.1.2",
     "react-native-url-polyfill": "^2.0.0",
     "react-native-worklets": "0.5.1",
-    "zustand": "^5.0.3",
-    "patch-package": "^8.0.1"
+    "zustand": "^5.0.3"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

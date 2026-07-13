@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { usePlayerStore } from '../store/playerStore';
 import { useThemeStore } from '../store/themeStore';
-import { useProgress, usePlaybackState, State } from 'react-native-track-player';
+import { useProgress, usePlaybackState, State } from '../store/playerStore';
 
 import { useRouter } from 'expo-router';
 

@@ -24,6 +24,7 @@ interface AIStore {
   personas: Persona[];
   addTask: (taskId: string, title: string, taskType?: 'GENERATE' | 'VOCAL_REMOVAL') => void;
   updateTask: (taskId: string, status: SunoTaskStatus, tracks?: SunoAudioData[]) => void;
+  updateTrack: (taskId: string, trackId: string, updates: Partial<SunoAudioData>) => void;
   removeTask: (taskId: string) => void;
   addPersona: (persona: Persona) => void;
   removePersona: (id: string) => void;
@@ -39,6 +40,15 @@ export const useAIStore = create<AIStore>()(
       })),
       updateTask: (taskId, status, tracks) => set((state) => ({
         tasks: state.tasks.map(t => t.taskId === taskId ? { ...t, status, tracks: tracks || t.tracks } : t)
+      })),
+      updateTrack: (taskId, trackId, updates) => set((state) => ({
+        tasks: state.tasks.map(t => {
+          if (t.taskId !== taskId || !t.tracks) return t;
+          return {
+            ...t,
+            tracks: t.tracks.map(trk => trk.id === trackId ? { ...trk, ...updates } : trk)
+          };
+        })
       })),
       removeTask: (taskId) => set((state) => ({
         tasks: state.tasks.filter(t => t.taskId !== taskId)

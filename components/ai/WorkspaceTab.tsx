@@ -112,6 +112,26 @@ function TaskItem({ task, isPublishing, setIsPublishing, isDownloading, setIsDow
     }
   };
 
+  const handleAutoDownload = async (taskId: string, tracks: SunoAudioData[]) => {
+    for (const track of tracks) {
+      try {
+        let targetAudioUrl = track.audioUrl || (track as any).streamAudioUrl || (track as any).sourceAudioUrl;
+        if (!targetAudioUrl || targetAudioUrl.startsWith('file://')) continue;
+
+        const localAudioUri = FileSystem.documentDirectory + `AI_${track.id}.mp3`;
+        
+        const fileInfo = await FileSystem.getInfoAsync(localAudioUri);
+        if (!fileInfo.exists) {
+          await FileSystem.downloadAsync(targetAudioUrl, localAudioUri);
+        }
+        
+        updateTrack(taskId, track.id, { audioUrl: localAudioUri });
+      } catch (e) {
+        console.log("Auto-download failed for track", track.id, e);
+      }
+    }
+  };
+
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
     if (task.status === 'PENDING' || task.status === 'PROCESSING') {
@@ -127,6 +147,7 @@ function TaskItem({ task, isPublishing, setIsPublishing, isDownloading, setIsDow
           if (hasTracks && info.data) {
              const mappedData = info.data.map((t: any) => ({ ...t, audioUrl: t.audioUrl || t.streamAudioUrl || t.sourceAudioUrl }));
              updateTask(task.taskId, 'SUCCESS', mappedData);
+             handleAutoDownload(task.taskId, mappedData);
           } else if (info.status === 'SENSITIVE_WORD_ERROR') {
              updateTask(task.taskId, 'SENSITIVE_WORD_ERROR');
           } else if (info.status === 'FAILED' || info.status?.includes('ERROR')) {
@@ -151,6 +172,7 @@ function TaskItem({ task, isPublishing, setIsPublishing, isDownloading, setIsDow
       if (hasTracks && info.data) {
         const mappedData = info.data.map((t: any) => ({ ...t, audioUrl: t.audioUrl || t.streamAudioUrl || t.sourceAudioUrl }));
         updateTask(task.taskId, 'SUCCESS', mappedData);
+        handleAutoDownload(task.taskId, mappedData);
       } else if (info.status === 'SENSITIVE_WORD_ERROR') {
         updateTask(task.taskId, 'SENSITIVE_WORD_ERROR');
       } else if (info.status === 'FAILED' || (info.status === 'SUCCESS' && !hasTracks)) {
@@ -205,7 +227,8 @@ function TaskItem({ task, isPublishing, setIsPublishing, isDownloading, setIsDow
         video_url: playTrackData.videoUrl || track.videoUrl,
         duration: Math.floor(playTrackData.duration || 0),
         play_count: 0,
-        is_unpublished: true
+        is_unpublished: true,
+        is_ai: true
       };
 
       usePlayerStore.getState().playTrack(aiTrack as any);
@@ -283,47 +306,38 @@ function TaskItem({ task, isPublishing, setIsPublishing, isDownloading, setIsDow
   const handleDownload = async (track: SunoAudioData) => {
     setIsDownloading((prev: any) => ({ ...prev, [track.id]: true }));
     try {
-      let targetAudioUrl = track.audioUrl || (track as any).streamAudioUrl || (track as any).sourceAudioUrl;
-      if (targetAudioUrl?.includes('cdn1.suno.ai') || targetAudioUrl?.includes('tempfile.aiquickdraw.com')) {
-        try {
-          const fetchPromise = task.taskType === 'VOCAL_REMOVAL' ? getVocalRemovalInfo(task.taskId) : getTaskInfo(task.taskId);
-          const timeoutPromise = new Promise<any>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000));
-          const info = await Promise.race([fetchPromise, timeoutPromise]);
-          if (info && info.data && info.data.length > 0) {
-            const freshTrack = info.data.find((t: any) => t.id === track.id);
-            if (freshTrack) {
-              targetAudioUrl = freshTrack.audioUrl || freshTrack.streamAudioUrl || freshTrack.sourceAudioUrl;
-            }
-          }
-        } catch (fallbackErr) {
-          console.log("Failed to refresh download URL, proceeding with original URL:", fallbackErr);
-        }
-      }
-
-      const localAudioUri = FileSystem.documentDirectory + `${(track.title || 'AI_Song').replace(/[^a-z0-9]/gi, '_')}.mp3`;
-      await FileSystem.downloadAsync(targetAudioUrl, localAudioUri);
+      let localAudioUri = track.audioUrl;
       
-      if (Platform.OS === 'android') {
-        const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
-        if (permissions.granted) {
-          const base64 = await FileSystem.readAsStringAsync(localAudioUri, { encoding: FileSystem.EncodingType.Base64 });
-          const createdFileUri = await FileSystem.StorageAccessFramework.createFileAsync(permissions.directoryUri, `${(track.title || 'AI_Song').replace(/[^a-z0-9]/gi, '_')}.mp3`, 'audio/mpeg');
-          await FileSystem.writeAsStringAsync(createdFileUri, base64, { encoding: FileSystem.EncodingType.Base64 });
-          Alert.alert("Success", "Song successfully saved to your phone's storage!");
-        } else {
-          Alert.alert("Permission Denied", "We need access to a folder to save your song.");
+      if (!localAudioUri?.startsWith('file://')) {
+        let targetAudioUrl = track.audioUrl || (track as any).streamAudioUrl || (track as any).sourceAudioUrl;
+        if (targetAudioUrl?.includes('cdn1.suno.ai') || targetAudioUrl?.includes('tempfile.aiquickdraw.com')) {
+          try {
+            const fetchPromise = task.taskType === 'VOCAL_REMOVAL' ? getVocalRemovalInfo(task.taskId) : getTaskInfo(task.taskId);
+            const timeoutPromise = new Promise<any>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000));
+            const info = await Promise.race([fetchPromise, timeoutPromise]);
+            if (info && info.data && info.data.length > 0) {
+              const freshTrack = info.data.find((t: any) => t.id === track.id);
+              if (freshTrack) {
+                targetAudioUrl = freshTrack.audioUrl || freshTrack.streamAudioUrl || freshTrack.sourceAudioUrl;
+              }
+            }
+          } catch (fallbackErr) {
+            console.log("Failed to refresh download URL, proceeding with original URL:", fallbackErr);
+          }
         }
+        localAudioUri = FileSystem.documentDirectory + `AI_${track.id}.mp3`;
+        await FileSystem.downloadAsync(targetAudioUrl, localAudioUri);
+        updateTrack(task.taskId, track.id, { audioUrl: localAudioUri });
+      }
+      
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(localAudioUri, {
+          mimeType: 'audio/mpeg',
+          dialogTitle: `Share ${track.title || 'AI Song'}`,
+          UTI: 'public.mp3'
+        });
       } else {
-        // For iOS, Sharing.shareAsync natively supports "Save to Files"
-        if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(localAudioUri, {
-            mimeType: 'audio/mpeg',
-            dialogTitle: `Save ${track.title || 'AI Song'}`,
-            UTI: 'public.mp3'
-          });
-        } else {
-          Alert.alert("Error", "Sharing is not available on this device.");
-        }
+        Alert.alert("Error", "Sharing is not available on this device.");
       }
     } catch (e: any) {
       Alert.alert("Download Error", e.message);
@@ -421,7 +435,7 @@ function TaskItem({ task, isPublishing, setIsPublishing, isDownloading, setIsDow
 
                 <TouchableOpacity style={styles.iconBtn} onPress={() => handleDownload(track)}>
                   {isDownloading[track.id] ? <ActivityIndicator size="small" color={COLORS.textPrimary} /> : (
-                    <Ionicons name="download-outline" size={18} color={COLORS.textPrimary} />
+                    <Ionicons name="share-outline" size={18} color={COLORS.textPrimary} />
                   )}
                 </TouchableOpacity>
 

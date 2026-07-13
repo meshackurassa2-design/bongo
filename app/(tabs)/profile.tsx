@@ -133,6 +133,7 @@ export default function ProfileScreen() {
         {(profile.role === 'artist' || profile.role === 'admin') && (
           <>
             <MenuRow icon="stats-chart" label="Artist Analytics Dashboard" iconColor={COLORS.gold} onPress={() => router.push('/artist/dashboard')} styles={styles} COLORS={COLORS} />
+            <MenuRow icon="wallet" label="Wallet & Payouts" iconColor={COLORS.gold} onPress={() => router.push('/artist/wallet')} styles={styles} COLORS={COLORS} />
             <MenuRow icon="checkmark-circle" label="Get Verified" iconColor={COLORS.gold} onPress={() => router.push('/settings/verify')} styles={styles} COLORS={COLORS} />
           </>
         )}

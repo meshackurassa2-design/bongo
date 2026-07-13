@@ -1,5 +1,12 @@
 import { create } from 'zustand';
-import TrackPlayer, { Capability, State, Event } from 'react-native-track-player';
+import TrackPlayer, { 
+  State, 
+  Event, 
+  RepeatMode, 
+  AppKilledPlaybackBehavior,
+  Capability,
+  PitchAlgorithm
+} from 'react-native-track-player';
 import { Track } from '../constants';
 import { useOfflineStore } from './offlineStore';
 import { useAuthStore } from './authStore';
@@ -15,7 +22,6 @@ type PlayerStore = {
   sleepTimerInterval: any | null;
   hasCountedPlay: boolean;
   isPlayerReady: boolean;
-  isPlaying: boolean;
   
   initPlayer: () => Promise<void>;
   playTrack: (track: Track, queue?: Track[]) => Promise<void>;
@@ -42,37 +48,33 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
   sleepTimerInterval: null,
   hasCountedPlay: false,
   isPlayerReady: false,
-  isPlaying: false,
 
   initPlayer: async () => {
     if (get().isPlayerReady) return;
     try {
       await TrackPlayer.setupPlayer();
       await TrackPlayer.updateOptions({
-        capabilities: [Capability.Play, Capability.Pause, Capability.SkipToNext, Capability.SkipToPrevious, Capability.Stop, Capability.SeekTo],
-        compactCapabilities: [Capability.Play, Capability.Pause, Capability.SkipToNext, Capability.SkipToPrevious],
+        android: {
+          appKilledPlaybackBehavior: AppKilledPlaybackBehavior.ContinuePlayback,
+        },
+        capabilities: [
+          Capability.Play,
+          Capability.Pause,
+          Capability.SkipToNext,
+          Capability.SkipToPrevious,
+          Capability.SeekTo,
+          Capability.Stop,
+        ],
+        compactCapabilities: [
+          Capability.Play,
+          Capability.Pause,
+          Capability.SkipToNext,
+        ],
       });
-
-      TrackPlayer.addEventListener(Event.PlaybackState, (event) => {
-         set({ isPlaying: event.state === State.Playing });
-      });
-
-      TrackPlayer.addEventListener(Event.PlaybackTrackChanged, () => {
-        set({ hasCountedPlay: false });
-      });
-
-      TrackPlayer.addEventListener(Event.PlaybackQueueEnded, () => {
-         if (get().repeatOne) {
-           TrackPlayer.seekTo(0);
-           TrackPlayer.play();
-         } else {
-           get().skipNext();
-         }
-      });
-
       set({ isPlayerReady: true });
     } catch (e) {
-      console.log("TrackPlayer setup error:", e);
+      console.log("TrackPlayer setup error (expected if already setup):", e);
+      set({ isPlayerReady: true });
     }
   },
 
@@ -81,18 +83,22 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
 
     set({ currentTrack: track, queue, hasCountedPlay: false });
 
-    const localUri = useOfflineStore.getState().getLocalUri(track.id);
-    
+    // Stop current
     await TrackPlayer.reset();
-    await TrackPlayer.add({
+
+    // Check offline
+    const localUri = useOfflineStore.getState().getLocalUri(track.id);
+
+    const trackObj = {
       id: track.id,
       url: localUri || track.audio_url,
       title: track.title,
-      artist: track.artist_name || 'Unknown Artist',
-      artwork: track.cover_url || undefined,
-      duration: track.duration_sec || 0,
-    });
-    
+      artist: track.artist_name,
+      artwork: track.cover_url || 'https://via.placeholder.com/150',
+      pitchAlgorithm: PitchAlgorithm.Linear // for chipmunk speed
+    };
+
+    await TrackPlayer.add([trackObj]);
     await TrackPlayer.setRate(get().playbackRate);
     await TrackPlayer.play();
   },
@@ -109,26 +115,32 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
   skipNext: async () => {
     const { queue, currentTrack, isShuffled, playTrack } = get();
     if (!currentTrack || queue.length === 0) return;
+
     const currentIdx = queue.findIndex(t => t.id === currentTrack.id);
-    let nextIdx = isShuffled ? Math.floor(Math.random() * queue.length) : (currentIdx + 1) % queue.length;
+    let nextIdx = isShuffled 
+      ? Math.floor(Math.random() * queue.length)
+      : (currentIdx + 1) % queue.length;
+    
     await playTrack(queue[nextIdx], queue);
   },
 
   skipPrev: async () => {
     const { queue, currentTrack, playTrack } = get();
     if (!currentTrack) return;
-    const progress = await TrackPlayer.getProgress();
-    if (progress.position > 3) {
+
+    const pos = await TrackPlayer.getProgress();
+    if (pos.position > 3) {
       await TrackPlayer.seekTo(0);
       return;
     }
+
     const currentIdx = queue.findIndex(t => t.id === currentTrack.id);
     const prevIdx = currentIdx > 0 ? currentIdx - 1 : queue.length - 1;
     await playTrack(queue[prevIdx], queue);
   },
 
   seekTo: async (ms: number) => {
-    await TrackPlayer.seekTo(ms / 1000);
+    await TrackPlayer.seekTo(ms / 1000); // RNTP uses seconds
   },
 
   setPlaybackRate: async (rate: number) => {
@@ -155,10 +167,7 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     const interval = setInterval(async () => {
       const { sleepTimerMs } = get();
       if (!sleepTimerMs || Date.now() >= sleepTimerMs) {
-        const state = await TrackPlayer.getPlaybackState();
-        if (state.state === State.Playing) {
-          await TrackPlayer.pause();
-        }
+        await TrackPlayer.pause();
         get().clearSleepTimer();
       }
     }, 1000);
@@ -178,6 +187,7 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
 
     set({ hasCountedPlay: true });
     
+    // Remote plays
     if (!currentTrack.id.startsWith('local_') && !(currentTrack as any).is_unpublished) {
       supabase.rpc('increment_play_count', { track_id: currentTrack.id }).then(({ error }) => {
         if (error) console.log("Failed to increment play count:", error.message);
@@ -203,3 +213,31 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     set({ currentTrack: null, sleepTimerMs: null, sleepTimerInterval: null });
   },
 }));
+
+// Setup event listeners outside the store
+if (typeof TrackPlayer !== 'undefined') {
+  TrackPlayer.addEventListener(Event.PlaybackQueueEnded, () => {
+    const store = usePlayerStore.getState();
+    if (store.repeatOne) {
+      TrackPlayer.seekTo(0);
+      TrackPlayer.play();
+    } else {
+      store.skipNext();
+    }
+  });
+
+  TrackPlayer.addEventListener(Event.PlaybackProgressUpdated, (evt) => {
+    const store = usePlayerStore.getState();
+    if (evt.position > 30 && !store.hasCountedPlay) {
+      store.markPlayCounted();
+    }
+  });
+
+  TrackPlayer.addEventListener(Event.RemotePlay, () => TrackPlayer.play());
+  TrackPlayer.addEventListener(Event.RemotePause, () => TrackPlayer.pause());
+  TrackPlayer.addEventListener(Event.RemoteNext, () => usePlayerStore.getState().skipNext());
+  TrackPlayer.addEventListener(Event.RemotePrevious, () => usePlayerStore.getState().skipPrev());
+}
+
+export { State } from 'react-native-track-player';
+export { useProgress, usePlaybackState } from 'react-native-track-player';
