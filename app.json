@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Bongo Stream",
-    "slug": "bongostreaming",
+    "slug": "combongostreamapp",
     "backgroundColor": "#0A0A0F",
     "version": "1.0.0",
     "scheme": "bongo-stream",
@@ -55,7 +55,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "9f432f7b-d36e-4c58-87ab-25d96cc3064e"
+        "projectId": "9c00d08b-2002-4e17-9e2a-40dc7d8ba6a2"
       }
     }
   }
