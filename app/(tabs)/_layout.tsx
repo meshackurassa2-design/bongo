@@ -26,6 +26,7 @@ export default function TabsLayout() {
         sceneContainerStyle={{ backgroundColor: COLORS.black }}
         tabBar={(props) => (
           <View>
+            <MiniPlayer />
             <BottomTabBar {...props} />
           </View>
         )}
