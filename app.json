@@ -1,0 +1,61 @@
+{
+  "expo": {
+    "name": "Bongo Stream",
+    "slug": "bongo-stream",
+    "backgroundColor": "#0A0A0F",
+    "version": "1.0.0",
+    "scheme": "bongo-stream",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#0A0A0F"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.bongostream.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0A0A0F"
+      },
+      "package": "com.bongostream.app",
+      "permissions": [
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "RECORD_AUDIO",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-av",
+      "expo-font",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Bongo Stream to access your camera to scan QR codes for Road Trips."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "3bb0a3eb-1e69-44f1-afb2-38e3fb0bfe5d"
+      }
+    },
+    "owner": "dapazcm"
+  }
+}

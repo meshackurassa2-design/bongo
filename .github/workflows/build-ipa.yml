@@ -1,0 +1,55 @@
+name: Build Unsigned iOS IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-ios:
+    name: Build Unsigned IPA
+    runs-on: macos-15
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+
+      - name: Fix Node Path for Xcode
+        continue-on-error: true
+        run: sudo ln -sf $(which node) /usr/local/bin/node
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Expo Prebuild (Generate iOS Folder)
+        run: npx expo prebuild --platform ios --clean
+
+      - name: Install CocoaPods
+        run: |
+          cd ios
+          pod install
+
+      - name: Build Unsigned App with xcodebuild
+        run: |
+          cd ios
+          NODE_BINARY=$(which node) xcodebuild -workspace BongoStream.xcworkspace -scheme BongoStream -configuration Release -sdk iphoneos -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" ENTITLEMENTS_REQUIRED=NO COMPILER_INDEX_STORE_ENABLE=NO build
+
+      - name: Package App into IPA
+        run: |
+          cd ios/build/Build/Products/Release-iphoneos
+          mkdir Payload
+          mv BongoStream.app Payload/
+          zip -r ../../../../../BongoStream.ipa Payload
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BongoStream-Unsigned-IPA
+          path: BongoStream.ipa
+          retention-days: 7
