@@ -70,6 +70,12 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
   initPlayer: async () => {
     if (get().isPlayerReady) return;
     try {
+      // Prevent expo-av from stealing the lock screen / background audio session
+      try {
+        const { Audio } = require('expo-av');
+        await Audio.setAudioModeAsync({ staysActiveInBackground: false, playsInSilentModeIOS: true });
+      } catch (e) {}
+
       await TrackPlayer.setupPlayer({
         iosCategory: 'playback', // equivalent to IOSCategory.Playback
         iosCategoryMode: 'default',
