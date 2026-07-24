@@ -125,7 +125,13 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     }
 
     const localUri = useOfflineStore.getState().getLocalUri(track.id);
-    const url = localUri || track.audio_url;
+    let url = localUri || track.audio_url;
+    
+    // iOS AVPlayer (which TrackPlayer uses under the hood) fails silently if URLs have raw spaces
+    // expo-av handles this automatically, which is why it worked there but failed here.
+    if (url && typeof url === 'string') {
+        url = url.replace(/ /g, '%20');
+    }
 
     const tpTrack: TPTrack = {
       id: track.id,
