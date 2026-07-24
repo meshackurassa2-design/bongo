@@ -75,7 +75,7 @@ export default function CreateTab({ onGenerateSuccess, openLyricsModal }: Create
         }
       }
       
-      const taskId = await generateMusic(lyrics, style, title, null, vocalGender, weirdness, styleInfluence);
+      const taskId = await generateMusic(lyrics, style, title, null, vocalGender, weirdness, styleInfluence, selectedPersona || undefined);
       
       addTask(taskId, title);
       
