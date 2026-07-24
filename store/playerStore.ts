@@ -154,16 +154,7 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     set({ currentTrack: track, queue, hasCountedPlay: false });
     notifyPlaybackState(State.Loading);
 
-    try {
-      MusicControl.setNowPlaying({
-        title: track.title,
-        artwork: track.cover_url || '',
-        artist: track.artist_name || 'Unknown Artist',
-        duration: track.duration_sec || 0, 
-      });
-    } catch (e) {
-      console.log('MusicControl error:', e);
-    }
+
 
     // If host, update the database
     if (get().mode === 'host' && get().liveStationId) {
@@ -239,6 +230,18 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
       }
       
       _sound = sound;
+
+      try {
+        MusicControl.setNowPlaying({
+          title: track.title,
+          artwork: track.cover_url || 'https://via.placeholder.com/150',
+          artist: track.artist_name || 'Unknown Artist',
+          duration: track.duration_sec || 0, 
+        });
+        MusicControl.updatePlayback({ state: MusicControl.STATE_PLAYING, elapsedTime: 0 });
+      } catch (e) {
+        console.log('MusicControl error:', e);
+      }
     } catch (e) {
       console.log('expo-av playTrack error:', e);
       // Only set error state if this is still the active track
