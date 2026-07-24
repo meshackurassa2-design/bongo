@@ -154,12 +154,16 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     set({ currentTrack: track, queue, hasCountedPlay: false });
     notifyPlaybackState(State.Loading);
 
-    MusicControl.setNowPlaying({
-      title: track.title,
-      artwork: track.cover_url || '',
-      artist: track.artist_name || 'Unknown Artist',
-      duration: track.duration_sec || 0, 
-    });
+    try {
+      MusicControl.setNowPlaying({
+        title: track.title,
+        artwork: track.cover_url || '',
+        artist: track.artist_name || 'Unknown Artist',
+        duration: track.duration_sec || 0, 
+      });
+    } catch (e) {
+      console.log('MusicControl error:', e);
+    }
 
     // If host, update the database
     if (get().mode === 'host' && get().liveStationId) {
@@ -196,16 +200,18 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
             buffered: (status.playableDurationMillis ?? 0) / 1000,
           });
 
-          if (status.isPlaying) {
-            notifyPlaybackState(State.Playing);
-            MusicControl.updatePlayback({ state: MusicControl.STATE_PLAYING, elapsedTime: status.positionMillis / 1000 });
-          } else if (status.isBuffering) {
-            notifyPlaybackState(State.Buffering);
-            MusicControl.updatePlayback({ state: MusicControl.STATE_BUFFERING, elapsedTime: status.positionMillis / 1000 });
-          } else {
-            notifyPlaybackState(State.Paused);
-            MusicControl.updatePlayback({ state: MusicControl.STATE_PAUSED, elapsedTime: status.positionMillis / 1000 });
-          }
+          try {
+            if (status.isPlaying) {
+              notifyPlaybackState(State.Playing);
+              MusicControl.updatePlayback({ state: MusicControl.STATE_PLAYING, elapsedTime: status.positionMillis / 1000 });
+            } else if (status.isBuffering) {
+              notifyPlaybackState(State.Buffering);
+              MusicControl.updatePlayback({ state: MusicControl.STATE_BUFFERING, elapsedTime: status.positionMillis / 1000 });
+            } else {
+              notifyPlaybackState(State.Paused);
+              MusicControl.updatePlayback({ state: MusicControl.STATE_PAUSED, elapsedTime: status.positionMillis / 1000 });
+            }
+          } catch(e) {}
 
           // Track ended
           if (status.didJustFinish) {
