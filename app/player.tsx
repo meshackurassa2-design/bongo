@@ -90,6 +90,7 @@ export default function PlayerScreen() {
     sleepTimerMs,
     setSleepTimer,
     clearSleepTimer,
+    removeTrackFromQueue,
   } = usePlayerStore();
 
   const isPlayingRef = useRef(false);
@@ -98,7 +99,8 @@ export default function PlayerScreen() {
 
   const { position, duration } = useProgress();
   const playbackState = usePlaybackState();
-  const isPlaying = playbackState.state === State.Playing;
+  const isPlaying = playbackState.state === State.Playing || playbackState.state === State.Buffering || playbackState.state === State.Loading;
+  const isActuallyPlaying = playbackState.state === State.Playing;
   const positionMs = (position || 0) * 1000;
   const durationMs = (duration || 0) * 1000;
   const [showSleepTimer, setShowSleepTimer] = useState(false);
@@ -322,14 +324,15 @@ export default function PlayerScreen() {
     // Animate the tonearm
     Animated.spring(armAnim, {
       toValue: (isPlaying || isScratching) ? targetAngle : -30,
+      toValue: (isActuallyPlaying || isScratching) ? targetAngle : -30,
       useNativeDriver: true,
       friction: 8,
       tension: 50
     }).start();
-  }, [isPlaying, isScratching, positionMs, durationMs, scratchPosMs]);
+  }, [isActuallyPlaying, isScratching, positionMs, durationMs, scratchPosMs]);
 
   useEffect(() => {
-    if (isPlaying && !isScratching) {
+    if (isActuallyPlaying && !isScratching) {
       Animated.loop(
         Animated.sequence([
           Animated.timing(scaleAnim, { toValue: 1.03, duration: 4000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
@@ -348,7 +351,7 @@ export default function PlayerScreen() {
     } else {
       scaleAnim.stopAnimation();
       pulseAnim.stopAnimation();
-      spinAnim.stopAnimation((val) => { currentSpin.current = val; });
+      if (spinLoop.current) spinLoop.current.stop();
       Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }).start();
       Animated.spring(pulseAnim, { toValue: 1, useNativeDriver: true }).start();
     }
@@ -999,11 +1002,11 @@ export default function PlayerScreen() {
                       <Text style={{ color: COLORS.textPrimary, fontSize: 16, fontWeight: '700' }} numberOfLines={1}>{item.title}</Text>
                       <Text style={{ color: COLORS.textSecondary, fontSize: 14 }} numberOfLines={1}>{item.artist_name}</Text>
                     </View>
-                    <TouchableOpacity onLongPress={drag} delayLongPress={100} style={{ padding: 12 }}>
-                      <Ionicons name="reorder-three" size={28} color={COLORS.textSecondary} />
+                    <TouchableOpacity onLongPress={drag} delayLongPress={150} style={{ padding: 12 }}>
+                      <Ionicons name="reorder-three" size={24} color={COLORS.textTertiary} />
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => removeTrackFromQueue(getIndex() || 0)} style={{ padding: 12, marginRight: -12 }}>
-                      <Ionicons name="close" size={24} color={COLORS.textTertiary} />
+                      <Ionicons name="close-circle-outline" size={20} color={COLORS.textTertiary} />
                     </TouchableOpacity>
                   </View>
                 )}
