@@ -90,7 +90,6 @@ export default function PlayerScreen() {
     sleepTimerMs,
     setSleepTimer,
     clearSleepTimer,
-    removeTrackFromQueue,
   } = usePlayerStore();
 
   const isPlayingRef = useRef(false);
