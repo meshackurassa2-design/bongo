@@ -47,15 +47,7 @@
     "plugins": [
       "expo-router",
       "expo-av",
-      "expo-font",
-      [
-        "expo-build-properties",
-        {
-          "ios": {
-            "newArchEnabled": false
-          }
-        }
-      ]
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true
