@@ -517,15 +517,23 @@ export default function PlayerScreen() {
             }}
             renderItem={({ item, index }) => {
               const isActive = index === activeLyricIndex;
+              const isNext = index === activeLyricIndex + 1;
+              const isPrev = index === activeLyricIndex - 1;
+              
+              // Only show active line, plus slightly faded next/prev lines to give "entering" effect
+              let opacity = 0;
+              if (isActive) opacity = 1;
+              else if (isNext || isPrev) opacity = 0.3;
+
               return (
                 <Text 
                   style={{
                     color: isActive ? COLORS.gold : COLORS.textTertiary,
-                    fontSize: isActive ? 24 : 18,
-                    fontWeight: isActive ? '800' : '600',
+                    fontSize: isActive ? 28 : 20,
+                    fontWeight: isActive ? '900' : '600',
                     textAlign: 'center',
                     marginBottom: 20,
-                    opacity: isActive ? 1 : 0.6
+                    opacity: opacity
                   }}
                 >
                   {item.text || '♪'}
