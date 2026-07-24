@@ -40,6 +40,8 @@ export default function CreateTab({ onGenerateSuccess, openLyricsModal }: Create
   const { addTask, personas } = useAIStore();
   const { session, profile } = useAuthStore();
   const [selectedPersona, setSelectedPersona] = useState<string | null>(null);
+  
+  const [missingFields, setMissingFields] = useState<string[]>([]);
 
   const handleGenerate = async () => {
     // If a persona is selected, default missing fields so it's easier to generate
@@ -47,10 +49,18 @@ export default function CreateTab({ onGenerateSuccess, openLyricsModal }: Create
     const finalStyle = style.trim() || (selectedPersona ? "Pop, vocal" : "");
     const finalLyrics = lyrics.trim();
 
-    if (!finalTitle || !finalStyle || !finalLyrics) {
+    const missing = [];
+    if (!finalTitle) missing.push('title');
+    if (!finalStyle) missing.push('style');
+    if (!finalLyrics) missing.push('lyrics');
+
+    if (missing.length > 0) {
+      setMissingFields(missing);
       Alert.alert("Missing Fields", "Please fill out title, style, and lyrics.");
       return;
     }
+    
+    setMissingFields([]);
     
     const requiredCredits = 1;
 
@@ -126,11 +136,14 @@ export default function CreateTab({ onGenerateSuccess, openLyricsModal }: Create
       )}
 
       <Text style={styles.label}>Song Title</Text>
-      <TextInput style={styles.input} placeholder="e.g. Midnight Memories" placeholderTextColor={COLORS.textTertiary} value={title} onChangeText={setTitle} />
+      <View style={[styles.inputRow, missingFields.includes('title') && { borderColor: '#FF3B30', borderWidth: 1 }]}>
+        <Ionicons name="text-outline" size={20} color={COLORS.gold} />
+        <TextInput style={styles.input} placeholder="e.g. Midnight Memories" placeholderTextColor={COLORS.textTertiary} value={title} onChangeText={(t) => { setTitle(t); setMissingFields(m => m.filter(f => f !== 'title')); }} />
+      </View>
       
-      <View style={styles.inputRow}>
+      <View style={[styles.inputRow, { marginTop: 16 }, missingFields.includes('style') && { borderColor: '#FF3B30', borderWidth: 1 }]}>
         <Ionicons name="musical-notes-outline" size={20} color={COLORS.gold} />
-        <TextInput style={styles.input} placeholder="e.g. Acoustic pop, upbeat" placeholderTextColor={COLORS.textTertiary} value={style} onChangeText={setStyle} />
+        <TextInput style={styles.input} placeholder="e.g. Acoustic pop, upbeat" placeholderTextColor={COLORS.textTertiary} value={style} onChangeText={(t) => { setStyle(t); setMissingFields(m => m.filter(f => f !== 'style')); }} />
       </View>
 
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, marginBottom: 8 }}>
@@ -142,7 +155,7 @@ export default function CreateTab({ onGenerateSuccess, openLyricsModal }: Create
         </TouchableOpacity>
       </View>
       
-      <TextInput style={[styles.input, styles.textArea]} placeholder="Write your verses and chorus here..." placeholderTextColor={COLORS.textTertiary} value={lyrics} onChangeText={setLyrics} multiline textAlignVertical="top" />
+      <TextInput style={[styles.input, styles.textArea, missingFields.includes('lyrics') && { borderColor: '#FF3B30', borderWidth: 1 }]} placeholder="Write your verses and chorus here..." placeholderTextColor={COLORS.textTertiary} value={lyrics} onChangeText={(t) => { setLyrics(t); setMissingFields(m => m.filter(f => f !== 'lyrics')); }} multiline textAlignVertical="top" />
 
       <TouchableOpacity style={styles.advancedToggle} onPress={() => setShowAdvanced(!showAdvanced)} activeOpacity={0.7}>
         <Text style={styles.advancedToggleText}>Advanced Options</Text>

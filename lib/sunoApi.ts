@@ -62,7 +62,7 @@ export const generateMusic = async (
     title,
     customMode: true,
     instrumental: false,
-    model: personaId ? "V3" : "V4_5ALL",
+    model: personaId ? "V3_5" : "V4_5ALL",
     callBackUrl: "https://httpbin.org/post",
   };
 
@@ -351,7 +351,7 @@ export const uploadAndCoverAudio = async (
     customMode: true,
     instrumental: false,
     callBackUrl: "https://httpbin.org/post",
-    model: "V3" // Always force V3 for covers to prevent it from getting stuck
+    model: "V3_5" // Always force V3_5 for covers to prevent it from getting stuck
   };
 
   if (personaId) {
