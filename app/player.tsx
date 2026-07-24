@@ -507,6 +507,8 @@ export default function PlayerScreen() {
             style={{ width: width - 60, height: width - 60, alignSelf: 'center', paddingHorizontal: 20 }} 
             contentContainerStyle={{ paddingVertical: 100, alignItems: 'center' }}
             showsVerticalScrollIndicator={false}
+            initialNumToRender={100}
+            maxToRenderPerBatch={100}
             onScrollToIndexFailed={(info) => {
               const wait = new Promise(resolve => setTimeout(resolve, 500));
               wait.then(() => {
