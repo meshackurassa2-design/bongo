@@ -480,8 +480,6 @@ export default function PlayerScreen() {
           {timeLeft && <Text style={{ color: COLORS.gold, fontSize: 10, fontWeight: '700', marginTop: 2, width: 56, textAlign: 'center' }} numberOfLines={1} adjustsFontSizeToFit>{timeLeft}</Text>}
         </TouchableOpacity>
       </View>
-      <View style={styles.artContainer}>
-      
       {/* Professional DJ Vinyl Art OR Lyrics */}
       <View style={{ width: width - 60, height: width - 60, alignSelf: 'center', justifyContent: 'center' }}>
         
