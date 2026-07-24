@@ -89,7 +89,7 @@ export default function CustomVoiceWizard({ visible, onClose, onSuccess }: Custo
           if (info.status === 'success') {
             clearInterval(interval);
             
-            const voiceId = info.data?.personaId || info.data?.voiceId || info.personaId || taskId;
+            const voiceId = info.data?.personaId || info.data?.persona_id || info.data?.id || info.data?.voiceId || info.personaId || info.persona_id || info.id || taskId;
             
             // Add to Zustand store
             import('../../store/aiStore').then(({ useAIStore }) => {
