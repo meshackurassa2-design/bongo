@@ -32,6 +32,7 @@ export default function UploadScreen() {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [progressLabel, setProgressLabel] = useState('');
+  const [selectedGenre, setSelectedGenre] = useState('Bongo Flava');
   const [showGenrePicker, setShowGenrePicker] = useState(false);
 
   if (!session) {
