@@ -26,4 +26,5 @@ if (global.ErrorUtils) {
 require('expo-router/entry');
 
 import TrackPlayer from 'react-native-track-player';
-TrackPlayer.registerPlaybackService(() => require('./service'));
+import playbackService from './service';
+TrackPlayer.registerPlaybackService(() => playbackService);
