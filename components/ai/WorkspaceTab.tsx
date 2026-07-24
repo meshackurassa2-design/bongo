@@ -170,14 +170,14 @@ function TaskItem({ task, isPublishing, setIsPublishing, isDownloading, setIsDow
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
     if (task.status === 'PENDING' || task.status === 'PROCESSING') {
-      interval = setInterval(async () => {
+      const poll = async () => {
         try {
           const info = task.taskType === 'VOCAL_REMOVAL' 
             ? await getVocalRemovalInfo(task.taskId) 
             : await getTaskInfo(task.taskId);
           setPollError(null);
           
-          const hasTracks = info.data && info.data.length > 0 && (info.data[0].sourceAudioUrl || info.data[0].audioUrl || info.data[0].streamAudioUrl);
+          const hasTracks = info.data && info.data.length > 0 && (info.data[0].audioUrl || info.data[0].streamAudioUrl);
           
           if (hasTracks && info.data) {
              const mappedData = info.data.map((t: any) => ({ ...t, audioUrl: t.audioUrl || t.streamAudioUrl || t.sourceAudioUrl }));
@@ -185,7 +185,7 @@ function TaskItem({ task, isPublishing, setIsPublishing, isDownloading, setIsDow
              handleAutoDownload(task.taskId, mappedData);
           } else if (info.status === 'SENSITIVE_WORD_ERROR') {
              updateTask(task.taskId, 'SENSITIVE_WORD_ERROR');
-          } else if (info.status === 'FAILED' || info.status?.includes('ERROR')) {
+          } else if (info.status?.includes('FAILED') || info.status?.includes('ERROR')) {
              updateTask(task.taskId, 'FAILED');
           } else if (info.status === 'SUCCESS' && !hasTracks) {
              updateTask(task.taskId, 'FAILED');
@@ -193,7 +193,9 @@ function TaskItem({ task, isPublishing, setIsPublishing, isDownloading, setIsDow
         } catch (e: any) {
           setPollError(e.message || "Network error");
         }
-      }, 10000);
+      };
+      poll(); // check immediately on mount
+      interval = setInterval(poll, 10000);
     }
     return () => clearInterval(interval);
   }, [task.status]);

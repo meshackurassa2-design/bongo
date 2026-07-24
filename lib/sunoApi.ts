@@ -50,32 +50,35 @@ export const generateMusic = async (
   styleInfluence?: number,
   personaId?: string
 ): Promise<string> => {
-  // Append vocal gender to tags if selected
-  let finalTags = tags;
+  const { provider, apiKey, baseUrl } = await getApiConfig();
+
+  let finalStyle = tags;
   if (vocalGender && vocalGender !== 'Any') {
-    finalTags = finalTags ? `${finalTags}, ${vocalGender.toLowerCase()} vocals` : `${vocalGender.toLowerCase()} vocals`;
+    finalStyle = finalStyle ? `${finalStyle}, ${vocalGender.toLowerCase()} vocals` : `${vocalGender.toLowerCase()} vocals`;
   }
 
   const payload: any = {
     prompt,
-    tags: finalTags,
     title,
     customMode: true,
     instrumental: false,
-    model: personaId ? "V5" : "V4_5ALL",
     callBackUrl: "https://httpbin.org/post",
   };
 
-  if (personaId) {
-    payload.personaId = personaId;
+  if (provider === 'kie') {
+    payload.style = finalStyle;
+    payload.model = personaId ? 'V5_5' : 'V4_5ALL';
+    if (typeof weirdness === 'number') payload.weirdnessConstraint = weirdness;
+    if (typeof styleInfluence === 'number') payload.styleWeight = styleInfluence;
+  } else {
+    payload.tags = finalStyle;
+    payload.model = personaId ? 'V5' : 'V4_5ALL';
+    if (typeof weirdness === 'number') payload.weirdness = weirdness;
+    if (typeof styleInfluence === 'number') payload.style_influence = styleInfluence;
   }
 
-  // Add advanced parameters if they are provided
+  if (personaId) payload.personaId = personaId;
   if (uploadUrl) payload.uploadUrl = uploadUrl;
-  if (typeof weirdness === 'number') payload.weirdness = weirdness;
-  if (typeof styleInfluence === 'number') payload.style_influence = styleInfluence;
-
-  const { provider, apiKey, baseUrl } = await getApiConfig();
 
   const response = await fetch(`${baseUrl}/generate`, {
     method: 'POST',
@@ -103,8 +106,8 @@ export const generateMusic = async (
   }
   
   if (!taskId) {
-     console.error("Suno API full response:", json);
-     throw new Error(json.msg || "No taskId returned. Check console for full response.");
+     console.error("API full response:", json);
+     throw new Error(json.msg || "No taskId returned.");
   }
   return taskId;
 };
@@ -174,43 +177,31 @@ export const getTaskInfo = async (taskId: string): Promise<SunoTaskResponse> => 
 
   const json = await response.json();
   
-  if (json.code !== 200 || !json.data) {
+  if (json.code !== 200 && !json.data) {
     throw new Error(json.msg || "Failed to fetch task info");
   }
 
   const taskData = json.data;
-  const status = taskData.successFlag || taskData.status || 'PENDING';
+  if (!taskData) {
+    return { taskId, status: 'PENDING', data: [] };
+  }
+
+  const status = (taskData.status || taskData.successFlag || 'PENDING') as SunoTaskStatus;
   
   let mappedData: SunoAudioData[] = [];
-  if (provider === 'kie' && taskData.response) {
-    if (taskData.response.vocalUrl) {
-      mappedData.push({
-        id: `${taskData.taskId}-vocal`,
-        title: 'Isolated Vocals',
-        imageUrl: 'https://via.placeholder.com/150/8A2BE2/FFFFFF?text=Vocals',
-        audioUrl: taskData.response.vocalUrl,
-        videoUrl: ''
-      });
+  if (taskData.response) {
+    const resp = taskData.response;
+    if (resp.sunoData && resp.sunoData.length > 0) {
+      mappedData = resp.sunoData.map((t: any) => ({ ...t, audioUrl: t.audioUrl || t.streamAudioUrl }));
+    } else if (resp.vocalUrl || resp.instrumentalUrl) {
+      if (resp.vocalUrl) mappedData.push({ id: `${taskData.taskId}-vocal`, title: 'Isolated Vocals', imageUrl: 'https://via.placeholder.com/150/8A2BE2/FFFFFF?text=Vocals', audioUrl: resp.vocalUrl, videoUrl: '' } as SunoAudioData);
+      if (resp.instrumentalUrl) mappedData.push({ id: `${taskData.taskId}-inst`, title: 'Isolated Instrumental', imageUrl: 'https://via.placeholder.com/150/4169E1/FFFFFF?text=Instrumental', audioUrl: resp.instrumentalUrl, videoUrl: '' } as SunoAudioData);
     }
-    if (taskData.response.instrumentalUrl) {
-      mappedData.push({
-        id: `${taskData.taskId}-inst`,
-        title: 'Isolated Instrumental',
-        imageUrl: 'https://via.placeholder.com/150/4169E1/FFFFFF?text=Instrumental',
-        audioUrl: taskData.response.instrumentalUrl,
-        videoUrl: ''
-      });
-    }
-    if (mappedData.length === 0) {
-      mappedData = taskData.response.sunoData || [];
-    }
-  } else {
-    mappedData = taskData.response?.sunoData || [];
   }
 
   return {
-    taskId: taskData.taskId,
-    status: status,
+    taskId: taskData.taskId || taskId,
+    status,
     data: mappedData,
   };
 };
@@ -351,7 +342,7 @@ export const uploadAndCoverAudio = async (
     customMode: true,
     instrumental: false,
     callBackUrl: "https://httpbin.org/post",
-    model: personaId ? "V5" : "V3_5" // Standard covers get stuck on V5, but Personas require V5
+    model: provider === 'kie' ? 'V5_5' : (personaId ? 'V5' : 'V3_5')
   };
 
   if (personaId) {
@@ -359,10 +350,7 @@ export const uploadAndCoverAudio = async (
   }
   
   if (audioId) payload.audioId = audioId;
-  if (audioUrl) {
-    payload.uploadUrl = audioUrl;
-    payload.audioUrl = audioUrl;
-  }
+  if (audioUrl) payload.uploadUrl = audioUrl;
 
   const response = await fetch(`${baseUrl}/generate/upload-cover`, {
     method: 'POST',
