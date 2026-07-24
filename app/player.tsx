@@ -17,6 +17,54 @@ import { ScrollView, FlatList } from 'react-native';
 import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
 import { useProgress, usePlaybackState, State } from '../store/playerStore';
 
+const LyricLine = ({ text, isActive, isNext, isPrev, COLORS }: { text: string, isActive: boolean, isNext: boolean, isPrev: boolean, COLORS: any }) => {
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    let target = 0;
+    if (isActive) target = 1;
+    else if (isNext || isPrev) target = 0.3;
+
+    Animated.timing(anim, {
+      toValue: target,
+      duration: 400,
+      easing: Easing.out(Easing.back(1.5)),
+      useNativeDriver: true
+    }).start();
+  }, [isActive, isNext, isPrev]);
+
+  const scale = anim.interpolate({
+    inputRange: [0, 0.3, 1],
+    outputRange: [0.7, 0.85, 1.2]
+  });
+
+  const opacity = anim.interpolate({
+    inputRange: [0, 0.3, 1],
+    outputRange: [0, 0.4, 1]
+  });
+
+  const translateY = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [10, 0]
+  });
+
+  return (
+    <Animated.Text 
+      style={{
+        color: isActive ? COLORS.gold : COLORS.textTertiary,
+        fontSize: 22,
+        fontWeight: isActive ? '900' : '600',
+        textAlign: 'center',
+        marginBottom: 24,
+        opacity,
+        transform: [{ scale }, { translateY }]
+      }}
+    >
+      {text || '♪'}
+    </Animated.Text>
+  );
+};
+
 
 const { width } = Dimensions.get('window');
 
@@ -521,25 +569,7 @@ export default function PlayerScreen() {
               const isNext = index === activeLyricIndex + 1;
               const isPrev = index === activeLyricIndex - 1;
               
-              // Only show active line, plus slightly faded next/prev lines to give "entering" effect
-              let opacity = 0;
-              if (isActive) opacity = 1;
-              else if (isNext || isPrev) opacity = 0.3;
-
-              return (
-                <Text 
-                  style={{
-                    color: isActive ? COLORS.gold : COLORS.textTertiary,
-                    fontSize: isActive ? 28 : 20,
-                    fontWeight: isActive ? '900' : '600',
-                    textAlign: 'center',
-                    marginBottom: 20,
-                    opacity: opacity
-                  }}
-                >
-                  {item.text || '♪'}
-                </Text>
-              );
+              return <LyricLine text={item.text} isActive={isActive} isNext={isNext} isPrev={isPrev} COLORS={COLORS} />;
             }}
             ListEmptyComponent={() => (
               <View style={{ alignItems: 'center', justifyContent: 'center', marginTop: 40 }}>
