@@ -28,6 +28,7 @@ export default function PlayerScreen() {
     currentTrack,
     queue,
     reorderQueue,
+    removeTrackFromQueue,
     isShuffled,
     repeatOne,
     togglePlayPause,
@@ -968,8 +969,11 @@ export default function PlayerScreen() {
                       <Text style={{ color: COLORS.textPrimary, fontSize: 16, fontWeight: '700' }} numberOfLines={1}>{item.title}</Text>
                       <Text style={{ color: COLORS.textSecondary, fontSize: 14 }} numberOfLines={1}>{item.artist_name}</Text>
                     </View>
-                    <TouchableOpacity onLongPress={drag} delayLongPress={100} style={{ padding: 12, marginRight: -12 }}>
+                    <TouchableOpacity onLongPress={drag} delayLongPress={100} style={{ padding: 12 }}>
                       <Ionicons name="reorder-three" size={28} color={COLORS.textSecondary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => removeTrackFromQueue(getIndex() || 0)} style={{ padding: 12, marginRight: -12 }}>
+                      <Ionicons name="close" size={24} color={COLORS.textTertiary} />
                     </TouchableOpacity>
                   </View>
                 )}

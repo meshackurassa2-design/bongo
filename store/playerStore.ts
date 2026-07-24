@@ -94,6 +94,7 @@ type PlayerStore = {
   setMode: (mode: PlayerMode, stationId?: string) => void;
   setVolume: (volume: number) => Promise<void>;
   addTrackToQueue: (track: Track) => void;
+  removeTrackFromQueue: (index: number) => void;
   reorderQueue: (from: number, to: number) => void;
 };
 
@@ -350,6 +351,14 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
 
   addTrackToQueue: (track: Track) => {
     set(state => ({ queue: [...state.queue, track] }));
+  },
+
+  removeTrackFromQueue: (index: number) => {
+    set(state => {
+      const newQueue = [...state.queue];
+      newQueue.splice(index, 1);
+      return { queue: newQueue };
+    });
   },
 
   reorderQueue: (from, to) => {
