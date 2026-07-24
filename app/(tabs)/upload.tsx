@@ -25,8 +25,8 @@ export default function UploadScreen() {
   const [title, setTitle] = useState('');
   const [collaborator, setCollaborator] = useState('');
   const [description, setDescription] = useState('');
-  const [lyricsText, setLyricsText] = useState('');
-  const [selectedGenre, setSelectedGenre] = useState(GENRES[0].name);
+  const [lyricsSwahili, setLyricsSwahili] = useState('');
+  const [lyricsEnglish, setLyricsEnglish] = useState('');
   const [audioFile, setAudioFile] = useState<{ uri: string; name: string; mimeType: string } | null>(null);
   const [coverUri, setCoverUri] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -116,7 +116,8 @@ export default function UploadScreen() {
         audio_url: audioUrl,
         cover_url: coverUrl,
         description: description.trim() || null,
-        lyrics: lyricsText.trim() || null,
+        lyrics_swahili: lyricsSwahili.trim() || null,
+        lyrics_english: lyricsEnglish.trim() || null,
         is_public: true,
         duration_sec: 0,
       });
@@ -124,7 +125,7 @@ export default function UploadScreen() {
 
       setProgress(1); setProgressLabel('Imefanikiwa!');
       Alert.alert('Hongera!', 'Wimbo wako umepakiwa!', [
-        { text: 'Sawa', onPress: () => { setTitle(''); setCollaborator(''); setDescription(''); setLyricsText(''); setAudioFile(null); setCoverUri(null); setUploading(false); router.replace('/'); } }
+        { text: 'Sawa', onPress: () => { setTitle(''); setCollaborator(''); setDescription(''); setLyricsSwahili(''); setLyricsEnglish(''); setAudioFile(null); setCoverUri(null); setUploading(false); router.replace('/'); } }
       ]);
     } catch (e: any) {
       Alert.alert('Imeshindwa', e.message ?? 'Jaribu tena');
@@ -175,6 +176,7 @@ export default function UploadScreen() {
       
       <View>
         <Text style={styles.fieldLabel}>Msanii Mkuu *</Text>
+
         <TextInput
           style={[styles.input, { backgroundColor: COLORS.cardAlt, color: COLORS.textSecondary }]}
           value={profile?.display_name ?? ''}
@@ -186,7 +188,9 @@ export default function UploadScreen() {
       
       <BongoInput styles={styles} COLORS={COLORS} label="Maelezo (Hiari)" value={description} onChangeText={setDescription} placeholder="Maelezo mafupi..." multiline />
       
-      <BongoInput styles={styles} COLORS={COLORS} label="Synced Lyrics (LRC) (Hiari)" value={lyricsText} onChangeText={setLyricsText} placeholder="[00:15.50] Mstari wa kwanza..." multiline />
+      <BongoInput styles={styles} COLORS={COLORS} label="Mashairi (Swahili) - Hiari" value={lyricsSwahili} onChangeText={setLyricsSwahili} placeholder="[00:15.50] Mstari wa kwanza..." multiline />
+      
+      <BongoInput styles={styles} COLORS={COLORS} label="Lyrics (English) - Optional" value={lyricsEnglish} onChangeText={setLyricsEnglish} placeholder="[00:15.50] First line..." multiline />
 
       {/* Genre picker */}
       <Text style={styles.fieldLabel}>Aina ya Muziki</Text>

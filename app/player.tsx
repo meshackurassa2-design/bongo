@@ -61,11 +61,16 @@ export default function PlayerScreen() {
   const [myPlaylists, setMyPlaylists] = useState<any[]>([]);
   const [loadingPlaylists, setLoadingPlaylists] = useState(false);
   const [showLyrics, setShowLyrics] = useState(false);
+  const [lyricsLang, setLyricsLang] = useState<'swahili'|'english'>('swahili');
   const [showQueueModal, setShowQueueModal] = useState(false);
 
   const parsedLyrics = useMemo(() => {
-    if (!currentTrack?.lyrics) return null;
-    const lines = currentTrack.lyrics.split('\n');
+    let rawLyrics = currentTrack?.lyrics;
+    if (lyricsLang === 'swahili' && currentTrack?.lyrics_swahili) rawLyrics = currentTrack.lyrics_swahili;
+    if (lyricsLang === 'english' && currentTrack?.lyrics_english) rawLyrics = currentTrack.lyrics_english;
+    
+    if (!rawLyrics) return null;
+    const lines = rawLyrics.split('\n');
     const result: { time: number; text: string }[] = [];
     
     const lrcRegex = /\[(\d{2}):(\d{2}\.\d{2})\](.*)/;
@@ -103,7 +108,7 @@ export default function PlayerScreen() {
     }
     
     return result;
-  }, [currentTrack?.lyrics, durationMs]);
+  }, [currentTrack, durationMs, lyricsLang]);
 
   const lyricsScrollRef = useRef<FlatList>(null);
 
@@ -475,13 +480,27 @@ export default function PlayerScreen() {
           {timeLeft && <Text style={{ color: COLORS.gold, fontSize: 10, fontWeight: '700', marginTop: 2, width: 56, textAlign: 'center' }} numberOfLines={1} adjustsFontSizeToFit>{timeLeft}</Text>}
         </TouchableOpacity>
       </View>
-
+      <View style={styles.artContainer}>
+      
       {/* Professional DJ Vinyl Art OR Lyrics */}
-      <View style={{ width: '100%', height: width - 60, marginBottom: 24, justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ width: width - 60, height: width - 60, alignSelf: 'center', justifyContent: 'center' }}>
         
         {/* Lyrics View */}
         <Animated.View pointerEvents={showLyrics ? 'auto' : 'none'} style={{ position: 'absolute', width: '100%', height: '100%', transform: [{ translateX: lyricsTranslateX }], opacity: lyricsOpacity, zIndex: showLyrics ? 10 : 1 }}>
-          <FlatList 
+          
+          {/* Bilingual Toggle */}
+          {(currentTrack?.lyrics_swahili || currentTrack?.lyrics_english) && (
+            <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 12, backgroundColor: COLORS.cardAlt, alignSelf: 'center', borderRadius: 20, padding: 4 }}>
+              <TouchableOpacity onPress={() => setLyricsLang('swahili')} style={{ paddingHorizontal: 16, paddingVertical: 6, borderRadius: 16, backgroundColor: lyricsLang === 'swahili' ? COLORS.gold : 'transparent' }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: lyricsLang === 'swahili' ? COLORS.black : COLORS.textSecondary }}>Swahili</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setLyricsLang('english')} style={{ paddingHorizontal: 16, paddingVertical: 6, borderRadius: 16, backgroundColor: lyricsLang === 'english' ? COLORS.gold : 'transparent' }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: lyricsLang === 'english' ? COLORS.black : COLORS.textSecondary }}>English</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {parsedLyrics ? (<FlatList 
             ref={lyricsScrollRef}
             data={parsedLyrics}
             keyExtractor={(item, index) => index.toString()}
@@ -517,7 +536,7 @@ export default function PlayerScreen() {
                 <Text style={{ color: COLORS.textSecondary, marginTop: 16, fontSize: 16, fontWeight: '600' }}>No synced lyrics available.</Text>
               </View>
             )}
-          />
+          />) : null}
         </Animated.View>
 
         {/* Vinyl View */}
