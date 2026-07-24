@@ -17,9 +17,10 @@ import AudioRecorder from './AudioRecorder';
 
 interface UploadCoverTabProps {
   onGenerateSuccess: () => void;
+  openLyricsModal?: (onComplete: (lyrics: string) => void) => void;
 }
 
-export default function UploadCoverTab({ onGenerateSuccess }: UploadCoverTabProps) {
+export default function UploadCoverTab({ onGenerateSuccess, openLyricsModal }: UploadCoverTabProps) {
   const { COLORS } = useThemeStore();
   const styles = getStyles(COLORS);
   const router = useRouter();
@@ -51,8 +52,8 @@ export default function UploadCoverTab({ onGenerateSuccess }: UploadCoverTabProp
   };
 
   const handleUploadAndCover = async () => {
-    if (!coverTitle || !coverStyle || !coverPrompt || !selectedPersona || !audioUri) {
-      Alert.alert("Missing Fields", "Please fill out all fields, select an audio file, and pick a Persona.");
+    if (!coverTitle || !coverStyle || !coverPrompt || !audioUri) {
+      Alert.alert("Missing Fields", "Please fill out all text fields and select an audio file.");
       return;
     }
     
@@ -85,7 +86,7 @@ export default function UploadCoverTab({ onGenerateSuccess }: UploadCoverTabProp
       const finalAudioUrl = supabase.storage.from('audio').getPublicUrl(`uploads/${fileName}`).data.publicUrl;
       setIsUploadingAudio(false);
 
-      const taskId = await uploadAndCoverAudio(coverPrompt, coverStyle, coverTitle, selectedPersona, undefined, finalAudioUrl);
+      const taskId = await uploadAndCoverAudio(coverPrompt, coverStyle, coverTitle, selectedPersona || undefined, undefined, finalAudioUrl);
       addTask(taskId, coverTitle);
       
       setCoverTitle('');
@@ -127,8 +128,15 @@ export default function UploadCoverTab({ onGenerateSuccess }: UploadCoverTabProp
       <Text style={styles.label}>Musical Style</Text>
       <TextInput style={styles.input} placeholder="e.g. Acoustic pop, upbeat" placeholderTextColor={COLORS.textTertiary} value={coverStyle} onChangeText={setCoverStyle} />
       
-      <Text style={styles.label}>Prompt Description</Text>
-      <TextInput style={[styles.input, { height: 120 }]} placeholder="Describe how it should sound..." placeholderTextColor={COLORS.textTertiary} value={coverPrompt} onChangeText={setCoverPrompt} multiline textAlignVertical="top" />
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, marginBottom: 8 }}>
+        <Text style={[styles.label, { marginTop: 0, marginBottom: 0 }]}>Lyrics (Your own words)</Text>
+        {openLyricsModal && (
+          <TouchableOpacity onPress={() => openLyricsModal((lyrics) => setCoverPrompt(lyrics))}>
+            <Text style={{ color: COLORS.gold, fontSize: 13, fontWeight: '700' }}>Write with AI</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+      <TextInput style={[styles.input, { height: 120 }]} placeholder="Write your own lyrics here..." placeholderTextColor={COLORS.textTertiary} value={coverPrompt} onChangeText={setCoverPrompt} multiline textAlignVertical="top" />
 
       <Text style={styles.label}>Source Audio File</Text>
       <View style={{ gap: 12 }}>
@@ -153,14 +161,14 @@ export default function UploadCoverTab({ onGenerateSuccess }: UploadCoverTabProp
         />
       </View>
 
-      <Text style={[styles.label, { marginTop: 32 }]}>Select Persona (Required)</Text>
+      <Text style={[styles.label, { marginTop: 32 }]}>Select Persona (Optional)</Text>
       {personas.length === 0 ? (
         <View style={styles.errorBox}>
-          <Ionicons name="warning" size={20} color={COLORS.error} />
-          <Text style={{ color: COLORS.error, fontSize: 13, flex: 1, fontWeight: '600' }}>No Personas found. Go to Workspace and extract a persona from a generated track first.</Text>
+          <Ionicons name="information-circle" size={20} color={COLORS.gold} />
+          <Text style={{ color: COLORS.gold, fontSize: 13, flex: 1, fontWeight: '600' }}>No Personas found. You can cover this audio using general AI styles, or extract a persona from the Workspace later to use here!</Text>
         </View>
       ) : (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row', paddingBottom: 10 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 10, gap: 16 }}>
           {personas.map(p => (
             <TouchableOpacity 
               key={p.id} 
@@ -174,7 +182,7 @@ export default function UploadCoverTab({ onGenerateSuccess }: UploadCoverTabProp
         </ScrollView>
       )}
 
-      <TouchableOpacity style={[styles.generateBtn, (isGenerating || personas.length === 0) && { opacity: 0.5 }]} onPress={handleUploadAndCover} disabled={isGenerating || personas.length === 0}>
+      <TouchableOpacity style={[styles.generateBtn, isGenerating && { opacity: 0.5 }]} onPress={handleUploadAndCover} disabled={isGenerating}>
         <LinearGradient colors={[COLORS.gold, '#F9A826']} start={{x: 0, y: 0}} end={{x: 1, y: 1}} style={[StyleSheet.absoluteFill, { borderRadius: 30 }]} />
         {isGenerating ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>

@@ -17,8 +17,8 @@ import SoundsTab from '../../components/ai/SoundsTab';
 import AILyricsModal from '../../components/ai/AILyricsModal';
 import ExtractPersonaModal from '../../components/ai/ExtractPersonaModal';
 
-type TabType = 'Create' | 'Sounds' | 'Workspace' | 'Personas';
-const TABS: TabType[] = ['Create', 'Sounds', 'Workspace', 'Personas'];
+type TabType = 'Create' | 'Cover' | 'Sounds' | 'Workspace' | 'Personas';
+const TABS: TabType[] = ['Create', 'Cover', 'Sounds', 'Workspace', 'Personas'];
 
 export default function AIStudioScreen() {
   const { COLORS } = useThemeStore();
@@ -99,6 +99,12 @@ export default function AIStudioScreen() {
             openLyricsModal={openLyricsModal} 
           />
         )}
+        {activeTab === 'Cover' && (
+          <UploadCoverTab 
+            onGenerateSuccess={() => setActiveTab('Workspace')} 
+            openLyricsModal={openLyricsModal}
+          />
+        )}
         {activeTab === 'Sounds' && (
           <SoundsTab 
             onGenerateSuccess={() => setActiveTab('Workspace')} 
@@ -110,13 +116,7 @@ export default function AIStudioScreen() {
           />
         )}
         {activeTab === 'Personas' && (
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 }}>
-            <Ionicons name="mic-outline" size={64} color={COLORS.gold} style={{ marginBottom: 16, opacity: 0.5 }} />
-            <Text style={{ color: COLORS.textPrimary, fontSize: 22, fontWeight: '800', marginBottom: 8 }}>Custom Voice Clones</Text>
-            <Text style={{ color: COLORS.textSecondary, fontSize: 15, textAlign: 'center', lineHeight: 22 }}>
-              Extract your own voice and use it to sing any song you generate! This advanced feature is coming in the next big update. Stay tuned!
-            </Text>
-          </View>
+          <PersonasTab />
         )}
       </View>
       
@@ -143,8 +143,8 @@ const getStyles = (COLORS: any) => StyleSheet.create({
   creditText: { color: COLORS.gold, fontSize: 14, fontWeight: '700' },
   
   tabContainer: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)', paddingBottom: 8 },
-  tabScroll: { paddingHorizontal: 16, gap: 8 },
-  tab: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, borderWidth: 1, borderColor: 'transparent' },
+  tabScroll: { paddingHorizontal: 16, gap: 6 },
+  tab: { paddingHorizontal: 12, paddingVertical: 10, borderRadius: 20, borderWidth: 1, borderColor: 'transparent' },
   activeTab: { borderColor: 'rgba(212, 175, 55, 0.3)' },
   tabText: { color: COLORS.textSecondary, fontWeight: '600', fontSize: 14 },
   activeTabText: { color: COLORS.gold, fontWeight: '800' },

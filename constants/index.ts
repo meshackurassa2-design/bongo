@@ -94,16 +94,19 @@ export const THEMES = {
 export const COLORS = THEMES.luxury;
 
 export const GENRES = [
-  { name: 'Bongo Flava', icon: 'mic', color: '#E91E63' },
-  { name: 'Taarab',      icon: 'musical-notes', color: '#9C27B0' },
-  { name: 'Singeli',     icon: 'flash', color: '#3F51B5' },
-  { name: 'Dansi',       icon: 'people', color: '#009688' },
-  { name: 'Gospel / Injili', icon: 'heart', color: '#FF5722' },
-  { name: 'Afrobeats',   icon: 'earth', color: '#795548' },
-  { name: 'Hip-hop',     icon: 'headset', color: '#607D8B' },
-  { name: 'R&B',         icon: 'musical-note', color: '#4CAF50' },
-  { name: 'Reggae',      icon: 'leaf', color: '#FF9800' },
-  { name: 'Traditional', icon: 'radio', color: '#00BCD4' },
+  { name: 'Bongo Flava', icon: 'mic', color: '#E91E63', emoji: '🇹🇿' },
+  { name: 'Amapiano',    icon: 'musical-notes', color: '#8E2DE2', emoji: '🎹' },
+  { name: 'Chill Vibes', icon: 'cafe', color: '#2193b0', emoji: '☕' },
+  { name: 'Emotion',     icon: 'heart-half', color: '#0f0c29', emoji: '💔' },
+  { name: 'Taarab',      icon: 'musical-notes', color: '#9C27B0', emoji: '🎻' },
+  { name: 'Singeli',     icon: 'flash', color: '#3F51B5', emoji: '⚡' },
+  { name: 'Dansi',       icon: 'people', color: '#009688', emoji: '💃' },
+  { name: 'Gospel / Injili', icon: 'heart', color: '#FF5722', emoji: '🙌' },
+  { name: 'Afrobeats',   icon: 'earth', color: '#795548', emoji: '🌍' },
+  { name: 'Hip-hop',     icon: 'headset', color: '#607D8B', emoji: '🎤' },
+  { name: 'R&B',         icon: 'musical-note', color: '#4CAF50', emoji: '🎵' },
+  { name: 'Reggae',      icon: 'leaf', color: '#FF9800', emoji: '🌿' },
+  { name: 'Traditional', icon: 'radio', color: '#00BCD4', emoji: '🥁' },
 ];
 
 export type Track = {
@@ -120,6 +123,7 @@ export type Track = {
   description: string | null;
   is_public: boolean;
   is_ai?: boolean;
+  lyrics?: string | null;
   created_at: string;
   profile?: Profile;
 };

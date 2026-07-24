@@ -31,6 +31,7 @@ export interface SunoAudioData {
   status: string;
   streamAudioUrl?: string;
   sourceAudioUrl?: string;
+  prompt?: string;
 }
 
 export interface SunoTaskResponse {
@@ -61,9 +62,13 @@ export const generateMusic = async (
     title,
     customMode: true,
     instrumental: false,
-    model: "V4_5ALL",
+    model: personaId ? "V3_5" : "V4_5ALL",
     callBackUrl: "https://httpbin.org/post",
   };
+
+  if (personaId) {
+    payload.personaId = personaId;
+  }
 
   // Add advanced parameters if they are provided
   if (uploadUrl) payload.uploadUrl = uploadUrl;
@@ -343,14 +348,21 @@ export const uploadAndCoverAudio = async (
     prompt,
     style,
     title,
-    personaId,
     customMode: true,
     instrumental: false,
     callBackUrl: "https://httpbin.org/post",
+    model: "V3_5" // Always force V3_5 for covers to prevent it from getting stuck
   };
+
+  if (personaId) {
+    payload.personaId = personaId;
+  }
   
   if (audioId) payload.audioId = audioId;
-  if (audioUrl) payload.audioUrl = audioUrl;
+  if (audioUrl) {
+    payload.uploadUrl = audioUrl;
+    payload.audioUrl = audioUrl;
+  }
 
   const response = await fetch(`${baseUrl}/generate/upload-cover`, {
     method: 'POST',
@@ -592,4 +604,46 @@ export const getVideoRecordInfo = async (taskId: string): Promise<any> => {
   if (json.code !== 200) throw new Error(json.msg || "Failed to get video info");
   
   return json.data;
+};
+
+// EXTEND AUDIO
+export const extendAudio = async (
+  audioId: string,
+  prompt: string,
+  continueAt?: string | number
+): Promise<string> => {
+  const { provider, apiKey, baseUrl } = await getApiConfig();
+  
+  const payload: any = {
+    audioId,
+    prompt,
+    customMode: true,
+    model: "V4_5ALL"
+  };
+  if (continueAt !== undefined && continueAt !== '') {
+    payload.continue_at = continueAt;
+  }
+
+  const response = await fetch(`${baseUrl}/generate/extend`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to extend audio: ${response.status} ${errorText}`);
+  }
+
+  const json = await response.json();
+  if (json.code !== 200) {
+    throw new Error(json.msg || "Failed to extend audio");
+  }
+
+  const taskId = json.data?.taskId || json.taskId || (typeof json.data === 'string' ? json.data : undefined);
+  if (!taskId) throw new Error("No taskId returned for extend audio");
+  return taskId;
 };

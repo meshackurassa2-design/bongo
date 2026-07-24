@@ -1,9 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeStore } from '../store/themeStore';
 import { Track } from '../constants';
+import { useOfflineStore } from '../store/offlineStore';
+import { useJamStore } from '../store/jamStore';
 
 type Props = {
   track: Track;
@@ -17,6 +19,13 @@ export default function TrackItem({ track, isPlaying, onPress, onArtistPress, on
   const { COLORS } = useThemeStore();
   const styles = getStyles(COLORS);
   const formatCount = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}K` : `${n}`;
+
+  const isDownloaded = useOfflineStore(s => s.isDownloaded(track.id));
+  const isDownloading = useOfflineStore(s => s.isDownloading[track.id]);
+  const downloadTrack = useOfflineStore(s => s.downloadTrack);
+
+  const role = useJamStore(s => s.role);
+  const broadcastAddTrack = useJamStore(s => s.broadcastAddTrack);
 
   return (
     <TouchableOpacity
@@ -51,7 +60,18 @@ export default function TrackItem({ track, isPlaying, onPress, onArtistPress, on
 
       {/* Stats & Actions */}
       <View style={styles.stats}>
-        <Text style={styles.stat}>{formatCount(track.play_count)} ▶</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+          {isDownloading ? (
+            <ActivityIndicator size="small" color={COLORS.gold} style={{ transform: [{ scale: 0.7 }] }} />
+          ) : isDownloaded ? (
+            <Ionicons name="checkmark-circle" size={16} color={COLORS.gold} />
+          ) : (
+            <TouchableOpacity onPress={() => downloadTrack(track)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Ionicons name="download-outline" size={16} color={COLORS.textTertiary} />
+            </TouchableOpacity>
+          )}
+          <Text style={styles.stat}>{formatCount(track.play_count)} ▶</Text>
+        </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, marginBottom: onDelete ? 4 : 0 }}>
           <Ionicons name="heart" size={10} color={COLORS.textTertiary} />
           <Text style={styles.stat}>{formatCount(track.like_count)}</Text>
@@ -60,6 +80,15 @@ export default function TrackItem({ track, isPlaying, onPress, onArtistPress, on
         {onDelete && (
           <TouchableOpacity onPress={onDelete} style={styles.deleteBtn}>
             <Ionicons name="trash-outline" size={16} color={COLORS.error} />
+          </TouchableOpacity>
+        )}
+
+        {role === 'guest' && (
+          <TouchableOpacity 
+            onPress={() => broadcastAddTrack(track)} 
+            style={[styles.deleteBtn, { backgroundColor: COLORS.gold + '20', marginTop: 8 }]}
+          >
+            <Ionicons name="car-sport" size={16} color={COLORS.gold} />
           </TouchableOpacity>
         )}
       </View>

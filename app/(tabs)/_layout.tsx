@@ -8,6 +8,7 @@ import MiniPlayer from '../../components/MiniPlayer';
 import { usePlayerStore } from '../../store/playerStore';
 import { useAuthStore } from '../../store/authStore';
 import { useTranslation } from 'react-i18next';
+import * as Haptics from 'expo-haptics';
 
 function TabBarIcon({ name, color }: { name: React.ComponentProps<typeof Ionicons>['name']; color: string }) {
   return <Ionicons name={name} size={24} color={color} />;
@@ -38,6 +39,11 @@ export default function TabsLayout() {
           tabBarLabelStyle: styles.label,
           tabBarShowLabel: true,
         }}
+        screenListeners={{
+          tabPress: () => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+          },
+        }}
       >
         <Tabs.Screen
           name="index"
@@ -66,6 +72,13 @@ export default function TabsLayout() {
             title: t('tabs.upload'),
             href: ((profile?.role as any) === 'artist' || (profile?.role as any) === 'admin') ? '/upload' : null,
             tabBarIcon: ({ color }) => <Ionicons name="cloud-upload" size={28} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="radio"
+          options={{
+            title: "Live",
+            tabBarIcon: ({ color }) => <TabBarIcon name="radio" color={color} />,
           }}
         />
         <Tabs.Screen

@@ -9,6 +9,7 @@ import { useThemeStore } from '../../store/themeStore';
 
 import { useTranslation } from 'react-i18next';
 import * as ScreenCapture from 'expo-screen-capture';
+import * as Haptics from 'expo-haptics';
 
 export default function ProfileScreen() {
   const { COLORS } = useThemeStore();
@@ -192,7 +193,7 @@ function StatItem({ label, value, styles }: { label: string; value: number; styl
 
 function MenuRow({ icon, label, onPress, iconColor, isLast, styles, COLORS }: { icon: string; label: string; onPress: () => void, iconColor: string, isLast?: boolean, styles: any, COLORS: any }) {
   return (
-    <TouchableOpacity style={[styles.menuRow, isLast && styles.menuRowLast]} onPress={onPress}>
+    <TouchableOpacity style={[styles.menuRow, isLast && styles.menuRowLast]} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {}); onPress(); }}>
       <View style={styles.menuIconBox}>
         <Ionicons name={icon as any} size={20} color={iconColor} />
       </View>

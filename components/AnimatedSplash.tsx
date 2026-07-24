@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Dimensions } from 'react-native';
+import { View, StyleSheet, Animated, Dimensions, Text, Easing } from 'react-native';
 import { useThemeStore } from '../store/themeStore';
 
 
@@ -19,11 +19,12 @@ export default function AnimatedSplash({ isReady }: Props) {
   const textTranslateY = useRef(new Animated.Value(30)).current;
 
   useEffect(() => {
-    // Entrance: Slide up and fade in the words
+    // Premium entrance: Smoothly slide up and fade in the words
     Animated.parallel([
       Animated.timing(textOpacity, {
         toValue: 1,
         duration: 800,
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
       Animated.spring(textTranslateY, {
@@ -37,23 +38,24 @@ export default function AnimatedSplash({ isReady }: Props) {
 
   useEffect(() => {
     if (isReady) {
-      // Give it a fixed minimum time to be seen, then exit
       setTimeout(() => {
         Animated.parallel([
           Animated.timing(containerOpacity, {
             toValue: 0,
-            duration: 600,
+            duration: 800,
+            easing: Easing.inOut(Easing.ease),
             useNativeDriver: true,
           }),
           Animated.timing(scale, {
-            toValue: 1.5,
-            duration: 600,
+            toValue: 1.15,
+            duration: 800,
+            easing: Easing.in(Easing.cubic),
             useNativeDriver: true,
           }),
         ]).start(() => {
           setIsAnimationComplete(true);
         });
-      }, 1200); // Hold for 1.2 seconds before disappearing
+      }, 1500); 
     }
   }, [isReady]);
 
@@ -63,7 +65,7 @@ export default function AnimatedSplash({ isReady }: Props) {
     <Animated.View style={[styles.container, { opacity: containerOpacity }]}>
       <Animated.View style={[styles.content, { transform: [{ scale }] }]}>
         <Animated.Text style={[styles.title, { opacity: textOpacity, transform: [{ translateY: textTranslateY }] }]}>
-          Bongo Stream
+          Bongo Streaming
         </Animated.Text>
         <Animated.Text style={[styles.subtitle, { opacity: textOpacity, transform: [{ translateY: textTranslateY }] }]}>
           Tanzania's Music Platform
@@ -87,17 +89,22 @@ const getStyles = (COLORS: any) => StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    color: '#fff',
-    fontSize: 36,
+    color: '#FF3565',
+    fontSize: 42,
     fontWeight: '900',
-    letterSpacing: 2,
-    marginBottom: 8,
+    fontStyle: 'italic',
+    letterSpacing: -1.5,
+    marginBottom: 4,
+    textShadowColor: 'rgba(255, 53, 101, 0.5)',
+    textShadowOffset: { width: 0, height: 4 },
+    textShadowRadius: 12,
   },
   subtitle: {
-    color: COLORS.gold,
-    fontSize: 14,
-    fontWeight: '600',
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '800',
     textTransform: 'uppercase',
-    letterSpacing: 3,
+    letterSpacing: 5,
+    opacity: 0.9,
   },
 });

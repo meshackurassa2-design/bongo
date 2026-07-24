@@ -1,14 +1,16 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, TextInput, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabase';
 import { useThemeStore } from '../../store/themeStore';
 import { Track, Profile } from '../../constants';
 import { usePlayerStore } from '../../store/playerStore';
 import TrackItem from '../../components/TrackItem';
 import { debounce } from '../../utils/helpers';
+import { Swipeable } from 'react-native-gesture-handler';
 
 export default function SearchScreen() {
   const { COLORS } = useThemeStore();
@@ -16,22 +18,46 @@ export default function SearchScreen() {
   const router = useRouter();
   const { q } = useLocalSearchParams<{ q?: string }>();
   const playTrack = usePlayerStore(s => s.playTrack);
+  const addTrackToQueue = usePlayerStore(s => s.addTrackToQueue);
   const currentTrack = usePlayerStore(s => s.currentTrack);
 
   const [query, setQuery] = useState(q || '');
   const [tracks, setTracks] = useState<Track[]>([]);
   const [artists, setArtists] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
-  React.useEffect(() => {
+  useEffect(() => {
+    loadSearchHistory();
     if (q) {
       doSearch(q);
     }
   }, [q]);
 
+  const loadSearchHistory = async () => {
+    try {
+      const history = await AsyncStorage.getItem('@search_history');
+      if (history) setRecentSearches(JSON.parse(history));
+    } catch (e) { console.error('Failed to load search history'); }
+  };
+
+  const saveToHistory = async (searchTerm: string) => {
+    try {
+      if (!searchTerm.trim()) return;
+      const history = await AsyncStorage.getItem('@search_history');
+      let parsed = history ? JSON.parse(history) : [];
+      if (!parsed.includes(searchTerm)) {
+        parsed = [searchTerm, ...parsed].slice(0, 10);
+        setRecentSearches(parsed);
+        await AsyncStorage.setItem('@search_history', JSON.stringify(parsed));
+      }
+    } catch (e) { console.error('Failed to save search history'); }
+  };
+
   const doSearch = async (searchTerm: string) => {
     if (!searchTerm.trim()) { setTracks([]); setArtists([]); return; }
     setLoading(true);
+    saveToHistory(searchTerm);
     const [tRes, aRes] = await Promise.all([
       supabase.from('tracks').select('*, profile:profiles!tracks_user_id_fkey(*)').eq('is_public', true)
         .or(`title.ilike.%${searchTerm}%,artist_name.ilike.%${searchTerm}%,genre.ilike.%${searchTerm}%`).limit(30),
@@ -48,6 +74,14 @@ export default function SearchScreen() {
   const onChangeQuery = (text: string) => {
     setQuery(text);
     debouncedSearch(text);
+  };
+
+  const renderRightActions = (track: Track) => {
+    return (
+      <View style={{ backgroundColor: COLORS.gold, justifyContent: 'center', alignItems: 'center', width: 80, marginVertical: 4, borderRadius: 12 }}>
+        <Ionicons name="list-circle" size={32} color={COLORS.black} />
+      </View>
+    );
   };
 
   return (
@@ -108,13 +142,22 @@ export default function SearchScreen() {
             )}
             {tracks.length > 0 && <Text style={styles.sectionLabel}>Nyimbo</Text>}
             {tracks.map(track => (
-              <TrackItem
-                key={track.id}
-                track={track}
-                isPlaying={currentTrack?.id === track.id}
-                onPress={() => playTrack(track, tracks)}
-                onArtistPress={() => router.push({ pathname: '/artist/[id]', params: { id: track.user_id } })}
-              />
+              <Swipeable 
+                key={track.id} 
+                renderRightActions={() => renderRightActions(track)}
+                onSwipeableOpen={(direction) => {
+                  if (direction === 'right') {
+                    addTrackToQueue(track);
+                  }
+                }}
+              >
+                <TrackItem
+                  track={track}
+                  isPlaying={currentTrack?.id === track.id}
+                  onPress={() => playTrack(track, tracks)}
+                  onArtistPress={() => router.push({ pathname: '/artist/[id]', params: { id: track.user_id } })}
+                />
+              </Swipeable>
             ))}
             {!loading && query.length > 0 && tracks.length === 0 && artists.length === 0 && (
               <View style={styles.empty}>
@@ -123,7 +166,32 @@ export default function SearchScreen() {
                 <Text style={styles.emptyText}>Jaribu kutafuta kitu kingine.</Text>
               </View>
             )}
-            {query.length === 0 && (
+            {query.length === 0 && recentSearches.length > 0 && (
+              <View style={{ paddingHorizontal: 16, marginTop: 16 }}>
+                <Text style={[styles.sectionLabel, { marginHorizontal: 0, marginTop: 0 }]}>Hivi Karibuni (Recent)</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {recentSearches.map((term, index) => (
+                    <TouchableOpacity 
+                      key={index}
+                      style={{ backgroundColor: COLORS.card, paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20 }}
+                      onPress={() => onChangeQuery(term)}
+                    >
+                      <Text style={{ color: COLORS.textPrimary, fontSize: 14 }}>{term}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <TouchableOpacity 
+                  style={{ marginTop: 16, alignSelf: 'flex-start' }}
+                  onPress={async () => {
+                    await AsyncStorage.removeItem('@search_history');
+                    setRecentSearches([]);
+                  }}
+                >
+                  <Text style={{ color: COLORS.textTertiary, fontSize: 13 }}>Futa Historia (Clear)</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            {query.length === 0 && recentSearches.length === 0 && (
               <View style={styles.empty}>
                 <Ionicons name="headset" size={64} color={COLORS.textSecondary} style={{ marginBottom: 12 }} />
                 <Text style={styles.emptyTitle}>Tafuta Muziki</Text>

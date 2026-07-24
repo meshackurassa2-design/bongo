@@ -37,8 +37,9 @@ export default function CreateTab({ onGenerateSuccess, openLyricsModal }: Create
   
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const { addTask } = useAIStore();
+  const { addTask, personas } = useAIStore();
   const { session, profile } = useAuthStore();
+  const [selectedPersona, setSelectedPersona] = useState<string | null>(null);
 
   const handleGenerate = async () => {
     if (!title || !style || !lyrics) {
@@ -86,7 +87,21 @@ export default function CreateTab({ onGenerateSuccess, openLyricsModal }: Create
       
       onGenerateSuccess();
     } catch (e: any) {
-      Alert.alert("Error", e.message);
+      Alert.alert("Error", "Failed to generate song. Your credit has been refunded. (" + e.message + ")");
+      // Refund credits since generation failed
+      try {
+        const { error: refundError } = await supabase.rpc('deduct_credits', { user_id: profile?.id, amount: -requiredCredits });
+        if (refundError) {
+          // Fallback if rpc fails
+          await supabase
+            .from('profiles')
+            .update({ credits: (profile?.credits || 0) + requiredCredits })
+            .eq('id', profile?.id);
+        }
+        if (session?.user.id) useAuthStore.getState().fetchProfile(session.user.id);
+      } catch (err) {
+        console.error("Failed to refund credits", err);
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -131,6 +146,30 @@ export default function CreateTab({ onGenerateSuccess, openLyricsModal }: Create
 
       {showAdvanced && (
         <View style={styles.advancedContainer}>
+          {personas.length > 0 && (
+            <View style={{ marginBottom: 24 }}>
+              <Text style={[styles.label, { marginTop: 0 }]}>Use Custom Voice Persona</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
+                <TouchableOpacity 
+                  style={[styles.personaPill, !selectedPersona && styles.personaPillActive]}
+                  onPress={() => setSelectedPersona(null)}
+                >
+                  <Text style={[styles.personaPillText, !selectedPersona && styles.personaPillTextActive]}>None</Text>
+                </TouchableOpacity>
+                {personas.map(p => (
+                  <TouchableOpacity 
+                    key={p.id}
+                    style={[styles.personaPill, selectedPersona === p.id && styles.personaPillActive]}
+                    onPress={() => setSelectedPersona(p.id)}
+                  >
+                    <Ionicons name="mic" size={14} color={selectedPersona === p.id ? COLORS.black : COLORS.textSecondary} style={{ marginRight: 4 }} />
+                    <Text style={[styles.personaPillText, selectedPersona === p.id && styles.personaPillTextActive]}>{p.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
           <Text style={[styles.label, { marginTop: 0 }]}>Vocal Gender</Text>
           <View style={styles.genderRow}>
             {['Male', 'Female', 'Any'].map(g => (
@@ -224,12 +263,18 @@ const getStyles = (COLORS: any) => StyleSheet.create({
   
   genderRow: { flexDirection: 'row', gap: 10 },
   genderBtn: { flex: 1, paddingVertical: 12, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', borderWidth: 1, borderColor: 'transparent' },
-  genderBtnActive: { borderColor: COLORS.gold, backgroundColor: 'rgba(212, 175, 55, 0.15)' },
-  genderText: { color: COLORS.textSecondary, fontWeight: '600', fontSize: 14 },
+  genderBtnActive: { backgroundColor: 'rgba(212, 175, 55, 0.2)', borderColor: COLORS.gold },
+  genderText: { color: COLORS.textSecondary, fontWeight: '600' },
   genderTextActive: { color: COLORS.gold },
   
-  generateBtn: { paddingVertical: 18, borderRadius: 30, alignItems: 'center', justifyContent: 'center', marginTop: 32, marginBottom: 16, overflow: 'hidden' },
-  generateBtnText: { color: COLORS.black, fontSize: 16, fontWeight: '800' },
+  generateBtn: { paddingVertical: 18, borderRadius: 30, alignItems: 'center', justifyContent: 'center', marginTop: 30, marginBottom: 40, overflow: 'hidden' },
+  generateBtnText: { color: COLORS.black, fontSize: 18, fontWeight: '800' },
+  
+  personaPill: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.05)', marginRight: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  personaPillActive: { backgroundColor: COLORS.gold, borderColor: COLORS.gold },
+  personaPillText: { color: COLORS.textSecondary, fontSize: 14, fontWeight: '600' },
+  personaPillTextActive: { color: COLORS.black, fontWeight: '800' },
+
   buyCreditsInlineBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.05)', paddingVertical: 16, borderRadius: 30, marginBottom: 40, gap: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
   buyCreditsInlineText: { color: COLORS.gold, fontSize: 15, fontWeight: '700' },
 });

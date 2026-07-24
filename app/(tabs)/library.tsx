@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView, Alert, Modal, TextInput, Switch, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -36,32 +36,37 @@ export default function LibraryScreen() {
   );
 
   const loadLibrary = async () => {
+    if (!session) return;
     setLoading(true);
-    if (tab === 'liked') {
-      const { data: likes } = await supabase.from('likes').select('track_id').eq('user_id', session!.user.id);
-      if (likes && likes.length > 0) {
-        const ids = likes.map(l => l.track_id);
-        const { data } = await supabase.from('tracks').select('*, profile:profiles!tracks_user_id_fkey(*)').in('id', ids).order('created_at', { ascending: false });
-        if (data) setLikedTracks(data as Track[]);
-      } else {
-        setLikedTracks([]);
+    try {
+      if (tab === 'liked') {
+        const { data: likes } = await supabase.from('likes').select('track_id').eq('user_id', session.user.id);
+        if (likes && likes.length > 0) {
+          const ids = likes.map(l => l.track_id);
+          const { data } = await supabase.from('tracks').select('*, profile:profiles!tracks_user_id_fkey(*)').in('id', ids).order('created_at', { ascending: false });
+          if (data) setLikedTracks(data as Track[]);
+        } else {
+          setLikedTracks([]);
+        }
+      } else if (tab === 'playlists') {
+        const { data: colabs } = await supabase.from('playlist_collaborators').select('playlist_id').eq('user_id', session.user.id);
+        const colabIds = colabs?.map(c => c.playlist_id) || [];
+        
+        const { data } = await supabase
+          .from('playlists')
+          .select('*')
+          .or(`user_id.eq.${session.user.id},id.in.(${colabIds.length ? colabIds.join(',') : '00000000-0000-0000-0000-000000000000'})`)
+          .order('created_at', { ascending: false });
+        if (data) setPlaylists(data);
+      } else if (tab === 'uploads') {
+        const { data } = await supabase.from('tracks').select('*, profile:profiles!tracks_user_id_fkey(*)').eq('user_id', session.user.id).order('created_at', { ascending: false });
+        if (data) setUploads(data as Track[]);
       }
-    } else if (tab === 'playlists') {
-      // Load user's owned playlists and playlists they collaborate on
-      const { data: colabs } = await supabase.from('playlist_collaborators').select('playlist_id').eq('user_id', session!.user.id);
-      const colabIds = colabs?.map(c => c.playlist_id) || [];
-      
-      const { data } = await supabase
-        .from('playlists')
-        .select('*')
-        .or(`user_id.eq.${session!.user.id},id.in.(${colabIds.length ? colabIds.join(',') : '00000000-0000-0000-0000-000000000000'})`)
-        .order('created_at', { ascending: false });
-      if (data) setPlaylists(data);
-    } else if (tab === 'uploads') {
-      const { data } = await supabase.from('tracks').select('*, profile:profiles!tracks_user_id_fkey(*)').eq('user_id', session!.user.id).order('created_at', { ascending: false });
-      if (data) setUploads(data as Track[]);
+    } catch (error) {
+      console.log("Offline or network error fetching library", error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const openCreatePlaylist = () => {
@@ -115,18 +120,11 @@ export default function LibraryScreen() {
     });
   };
 
-  if (!session) {
-    return (
-      <View style={styles.noAuth}>
-        <Text style={{ fontSize: 48 }}>🎵</Text>
-        <Text style={styles.noAuthTitle}>Maktaba Yako</Text>
-        <Text style={styles.noAuthText}>Ingia kuona nyimbo ulizopenda</Text>
-        <TouchableOpacity style={styles.loginBtn} onPress={() => router.push('/auth')}>
-          <Text style={styles.loginBtnText}>Ingia / Jisajili</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+  useEffect(() => {
+    if (!session && tab !== 'downloads') {
+      setTab('downloads');
+    }
+  }, [session]);
 
   const isArtist = session?.user?.user_metadata?.role === 'artist';
   const tracks = tab === 'liked' ? likedTracks : tab === 'uploads' ? uploads : Object.values(downloadedTracks);
@@ -151,15 +149,19 @@ export default function LibraryScreen() {
       {/* Tabs */}
       <View style={{ marginBottom: 12 }}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>
-          <TouchableOpacity style={[styles.tab, tab === 'liked' && styles.tabActive]} onPress={() => setTab('liked')}>
-            <Ionicons name="heart" size={16} color={tab === 'liked' ? COLORS.gold : COLORS.textTertiary} />
-            <Text style={[styles.tabText, tab === 'liked' && styles.tabTextActive]}>Nilizopenda</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.tab, tab === 'playlists' && styles.tabActive]} onPress={() => setTab('playlists')}>
-            <Ionicons name="list" size={16} color={tab === 'playlists' ? COLORS.gold : COLORS.textTertiary} />
-            <Text style={[styles.tabText, tab === 'playlists' && styles.tabTextActive]}>Playlists</Text>
-          </TouchableOpacity>
-          {isArtist && (
+          {session && (
+            <>
+              <TouchableOpacity style={[styles.tab, tab === 'liked' && styles.tabActive]} onPress={() => setTab('liked')}>
+                <Ionicons name="heart" size={16} color={tab === 'liked' ? COLORS.gold : COLORS.textTertiary} />
+                <Text style={[styles.tabText, tab === 'liked' && styles.tabTextActive]}>Nilizopenda</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.tab, tab === 'playlists' && styles.tabActive]} onPress={() => setTab('playlists')}>
+                <Ionicons name="list" size={16} color={tab === 'playlists' ? COLORS.gold : COLORS.textTertiary} />
+                <Text style={[styles.tabText, tab === 'playlists' && styles.tabTextActive]}>Playlists</Text>
+              </TouchableOpacity>
+            </>
+          )}
+          {session && isArtist && (
             <TouchableOpacity style={[styles.tab, tab === 'uploads' && styles.tabActive]} onPress={() => setTab('uploads')}>
               <Ionicons name="cloud-upload" size={16} color={tab === 'uploads' ? COLORS.gold : COLORS.textTertiary} />
               <Text style={[styles.tabText, tab === 'uploads' && styles.tabTextActive]}>Nilichopakia</Text>

@@ -70,7 +70,10 @@ export default function AudioRecorder({ onAudioReady, onClear, currentAudioUri, 
     if (timer) clearInterval(timer);
 
     await recording.stopAndUnloadAsync();
-    await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
+    await Audio.setAudioModeAsync({ 
+      allowsRecordingIOS: false,
+      playsInSilentModeIOS: true,
+    });
     
     const uri = recording.getURI();
     if (uri) {
@@ -83,6 +86,11 @@ export default function AudioRecorder({ onAudioReady, onClear, currentAudioUri, 
     if (!currentAudioUri) return;
     
     try {
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+      });
+
       if (sound) {
         await sound.playAsync();
         setIsPlaying(true);
@@ -101,8 +109,9 @@ export default function AudioRecorder({ onAudioReady, onClear, currentAudioUri, 
       );
       setSound(newSound);
       setIsPlaying(true);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      alert("Could not play this audio. If you recorded a very short clip, it might be corrupted. Please record again.");
     }
   };
 

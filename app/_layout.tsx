@@ -1,10 +1,22 @@
 import { useEffect } from 'react';
+import { LogBox, Alert } from 'react-native';
+
+const originalHandler = global.ErrorUtils?.getGlobalHandler?.();
+if (global.ErrorUtils) {
+  global.ErrorUtils.setGlobalHandler((error, isFatal) => {
+    Alert.alert("FATAL JS ERROR", error.message + "\n\n" + error.stack);
+    if (originalHandler) {
+      originalHandler(error, isFatal);
+    }
+  });
+}
+
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useAuthStore } from '../store/authStore';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ThemeProvider, DarkTheme } from '@react-navigation/native';
-import { StyleSheet, LogBox } from 'react-native';
+import { StyleSheet } from 'react-native';
 import AnimatedSplash from '../components/AnimatedSplash';
 import ThemeEffects from '../components/ThemeEffects';
 import '../i18n';
@@ -12,13 +24,7 @@ import '../i18n';
 // Ignore harmless background Supabase auth network errors in dev mode
 LogBox.ignoreLogs(['TypeError: Network request failed']);
 
-import TrackPlayer from 'react-native-track-player';
-import playbackService from '../service';
-try {
-  TrackPlayer.registerPlaybackService(() => playbackService);
-} catch (e) {
-  console.log("TrackPlayer service registration failed", e);
-}
+
 
 const customTheme = {
   ...DarkTheme,

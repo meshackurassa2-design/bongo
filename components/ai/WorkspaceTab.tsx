@@ -7,6 +7,7 @@ import * as Sharing from 'expo-sharing';
 import { decode } from 'base64-arraybuffer';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
 
 import { supabase } from '../../lib/supabase';
 import { getTaskInfo, getVocalRemovalInfo, separateVocals, SunoAudioData, createMusicVideo, getVideoRecordInfo } from '../../lib/sunoApi';
@@ -14,6 +15,7 @@ import { useAIStore, AISongTask } from '../../store/aiStore';
 import { useAuthStore } from '../../store/authStore';
 import { usePlayerStore } from '../../store/playerStore';
 import { useThemeStore } from '../../store/themeStore';
+import ExtendModal from './ExtendModal';
 
 
 interface WorkspaceTabProps {
@@ -28,6 +30,25 @@ export default function WorkspaceTab({ openPersonaModal }: WorkspaceTabProps) {
   const [isDownloading, setIsDownloading] = useState<Record<string, boolean>>({});
   const [isGeneratingVideo, setIsGeneratingVideo] = useState<Record<string, boolean>>({});
   const [isSeparating, setIsSeparating] = useState<Record<string, boolean>>({});
+
+  const [extendModalVisible, setExtendModalVisible] = useState(false);
+  const [extendAudioId, setExtendAudioId] = useState<string | null>(null);
+  const [extendOriginalTitle, setExtendOriginalTitle] = useState('');
+
+  const openExtendModal = (audioId: string, title: string) => {
+    setExtendAudioId(audioId);
+    setExtendOriginalTitle(title);
+    setExtendModalVisible(true);
+  };
+
+  const handleExtendSuccess = (taskId: string, originalTitle: string) => {
+    useAIStore.getState().addTask(
+      taskId,
+      `Ext: ${originalTitle || 'AI Track'}`,
+      'TEXT_TO_MUSIC'
+    );
+    Alert.alert("Success", "Extension started! A new task has been added to your workspace.");
+  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
@@ -55,14 +76,23 @@ export default function WorkspaceTab({ openPersonaModal }: WorkspaceTabProps) {
             isSeparating={isSeparating}
             setIsSeparating={setIsSeparating}
             openPersonaModal={openPersonaModal}
+            openExtendModal={openExtendModal}
           />
         ))
       )}
+
+      <ExtendModal 
+         visible={extendModalVisible}
+         onClose={() => setExtendModalVisible(false)}
+         audioId={extendAudioId}
+         originalTitle={extendOriginalTitle}
+         onSuccess={handleExtendSuccess}
+      />
     </ScrollView>
   );
 }
 
-function TaskItem({ task, isPublishing, setIsPublishing, isDownloading, setIsDownloading, isGeneratingVideo, setIsGeneratingVideo, isSeparating, setIsSeparating, openPersonaModal }: { task: AISongTask, isPublishing: any, setIsPublishing: any, isDownloading: any, setIsDownloading: any, isGeneratingVideo: any, setIsGeneratingVideo: any, isSeparating: any, setIsSeparating: any, openPersonaModal: (id: string) => void }) {
+function TaskItem({ task, isPublishing, setIsPublishing, isDownloading, setIsDownloading, isGeneratingVideo, setIsGeneratingVideo, isSeparating, setIsSeparating, openPersonaModal, openExtendModal }: { task: AISongTask, isPublishing: any, setIsPublishing: any, isDownloading: any, setIsDownloading: any, isGeneratingVideo: any, setIsGeneratingVideo: any, isSeparating: any, setIsSeparating: any, openPersonaModal: (id: string) => void, openExtendModal: (audioId: string, title: string) => void }) {
   const { COLORS } = useThemeStore();
   const styles = getStyles(COLORS);
   const router = useRouter();
@@ -70,6 +100,7 @@ function TaskItem({ task, isPublishing, setIsPublishing, isDownloading, setIsDow
   const [pollError, setPollError] = useState<string | null>(null);
 
   const handleGenerateVideo = async (track: SunoAudioData) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     const { profile, fetchProfile } = useAuthStore.getState();
     if (!profile || profile.credits < 1) {
       Alert.alert("Out of Credits", "You need at least 1 credit to generate a video. Buy more credits to continue!");
@@ -122,7 +153,11 @@ function TaskItem({ task, isPublishing, setIsPublishing, isDownloading, setIsDow
         
         const fileInfo = await FileSystem.getInfoAsync(localAudioUri);
         if (!fileInfo.exists) {
-          await FileSystem.downloadAsync(targetAudioUrl, localAudioUri);
+          const { status } = await FileSystem.downloadAsync(targetAudioUrl, localAudioUri);
+          if (status !== 200) {
+            await FileSystem.deleteAsync(localAudioUri, { idempotent: true });
+            throw new Error(`Failed to download audio, status: ${status}`);
+          }
         }
         
         updateTrack(taskId, track.id, { audioUrl: localAudioUri });
@@ -184,6 +219,7 @@ function TaskItem({ task, isPublishing, setIsPublishing, isDownloading, setIsDow
   };
 
   const handlePlay = async (track: SunoAudioData) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     try {
       let playTrackData = track;
       let targetUrl = track.audioUrl || (track as any).audio_url || (track as any).streamAudioUrl || (track as any).sourceAudioUrl;
@@ -228,9 +264,11 @@ function TaskItem({ task, isPublishing, setIsPublishing, isDownloading, setIsDow
         duration: Math.floor(playTrackData.duration || 0),
         play_count: 0,
         is_unpublished: true,
-        is_ai: true
+        is_ai: true,
+        lyrics: playTrackData.prompt || null
       };
 
+      usePlayerStore.getState().setMode('local');
       usePlayerStore.getState().playTrack(aiTrack as any);
       router.push('/player');
     } catch (e: any) {
@@ -239,6 +277,7 @@ function TaskItem({ task, isPublishing, setIsPublishing, isDownloading, setIsDow
   };
 
   const handlePublish = async (track: SunoAudioData) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setIsPublishing((prev: any) => ({ ...prev, [track.id]: true }));
     try {
       const { session, profile } = useAuthStore.getState();
@@ -264,23 +303,44 @@ function TaskItem({ task, isPublishing, setIsPublishing, isDownloading, setIsDow
         }
       }
 
-      const localAudioUri = FileSystem.cacheDirectory + `${track.id}.mp3`;
-      await FileSystem.downloadAsync(targetAudioUrl, localAudioUri);
-      
-      const localCoverUri = FileSystem.cacheDirectory + `${track.id}.jpg`;
-      await FileSystem.downloadAsync(targetCoverUrl, localCoverUri);
+      // If the audio is already a local file (file://), use it directly; otherwise download it
+      let localAudioUri: string;
+      if (targetAudioUrl?.startsWith('file://')) {
+        localAudioUri = targetAudioUrl;
+      } else {
+        localAudioUri = FileSystem.cacheDirectory + `${track.id}.mp3`;
+        await FileSystem.downloadAsync(targetAudioUrl, localAudioUri);
+      }
+
+      // If the cover is already a local file (file://), use it directly; otherwise download it
+      let localCoverUri: string;
+      if (targetCoverUrl?.startsWith('file://')) {
+        localCoverUri = targetCoverUrl;
+      } else {
+        localCoverUri = FileSystem.cacheDirectory + `${track.id}.jpg`;
+        if (targetCoverUrl) {
+          await FileSystem.downloadAsync(targetCoverUrl, localCoverUri);
+        } else {
+          localCoverUri = ''; // no cover
+        }
+      }
+
 
       const audioBase64 = await FileSystem.readAsStringAsync(localAudioUri, { encoding: FileSystem.EncodingType.Base64 });
-      const coverBase64 = await FileSystem.readAsStringAsync(localCoverUri, { encoding: FileSystem.EncodingType.Base64 });
 
       const { error: audioErr } = await supabase.storage.from('audio').upload(`ai_tracks/${track.id}.mp3`, decode(audioBase64), { contentType: 'audio/mpeg' });
       if (audioErr) throw audioErr;
 
-      const { error: coverErr } = await supabase.storage.from('images').upload(`ai_covers/${track.id}.jpg`, decode(coverBase64), { contentType: 'image/jpeg' });
-      if (coverErr) throw coverErr;
+      let coverPublicUrl = '';
+      if (localCoverUri) {
+        const coverBase64 = await FileSystem.readAsStringAsync(localCoverUri, { encoding: FileSystem.EncodingType.Base64 });
+        const { error: coverErr } = await supabase.storage.from('images').upload(`ai_covers/${track.id}.jpg`, decode(coverBase64), { contentType: 'image/jpeg' });
+        if (!coverErr) {
+          coverPublicUrl = supabase.storage.from('images').getPublicUrl(`ai_covers/${track.id}.jpg`).data.publicUrl;
+        }
+      }
 
       const audioPublicUrl = supabase.storage.from('audio').getPublicUrl(`ai_tracks/${track.id}.mp3`).data.publicUrl;
-      const coverPublicUrl = supabase.storage.from('images').getPublicUrl(`ai_covers/${track.id}.jpg`).data.publicUrl;
 
       const { error: dbErr } = await supabase.from('tracks').insert({
         user_id: session.user.id,
@@ -288,6 +348,7 @@ function TaskItem({ task, isPublishing, setIsPublishing, isDownloading, setIsDow
         title: track.title || task.title,
         audio_url: audioPublicUrl,
         cover_url: coverPublicUrl,
+        lyrics: track.prompt || null,
         duration_sec: Math.floor(track.duration || 0),
         play_count: 0,
         is_public: true,
@@ -325,9 +386,15 @@ function TaskItem({ task, isPublishing, setIsPublishing, isDownloading, setIsDow
             console.log("Failed to refresh download URL, proceeding with original URL:", fallbackErr);
           }
         }
-        localAudioUri = FileSystem.documentDirectory + `AI_${track.id}.mp3`;
-        await FileSystem.downloadAsync(targetAudioUrl, localAudioUri);
-        updateTrack(task.taskId, track.id, { audioUrl: localAudioUri });
+        if (targetAudioUrl && !targetAudioUrl.startsWith('file://')) {
+          localAudioUri = FileSystem.documentDirectory + `AI_${track.id}.mp3`;
+          const { status } = await FileSystem.downloadAsync(targetAudioUrl, localAudioUri);
+          if (status === 200) {
+            updateTrack(task.taskId, track.id, { audioUrl: localAudioUri });
+          } else {
+            await FileSystem.deleteAsync(localAudioUri, { idempotent: true });
+          }
+        }
       }
       
       if (await Sharing.isAvailableAsync()) {
@@ -347,6 +414,7 @@ function TaskItem({ task, isPublishing, setIsPublishing, isDownloading, setIsDow
   };
 
   const handleSeparateVocals = async (track: SunoAudioData) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     const { profile, fetchProfile } = useAuthStore.getState();
     if (!profile || profile.credits < 1) {
       Alert.alert("Out of Credits", "You need at least 1 credit to separate vocals. Buy more credits to continue!");
@@ -433,12 +501,6 @@ function TaskItem({ task, isPublishing, setIsPublishing, isDownloading, setIsDow
                   )}
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.iconBtn} onPress={() => handleDownload(track)}>
-                  {isDownloading[track.id] ? <ActivityIndicator size="small" color={COLORS.textPrimary} /> : (
-                    <Ionicons name="share-outline" size={18} color={COLORS.textPrimary} />
-                  )}
-                </TouchableOpacity>
-
                 {!track.videoUrl ? (
                   <TouchableOpacity style={styles.iconBtn} onPress={() => handleGenerateVideo(track)}>
                     {isGeneratingVideo[track.id] ? <ActivityIndicator size="small" color={COLORS.textPrimary} /> : (
@@ -457,7 +519,11 @@ function TaskItem({ task, isPublishing, setIsPublishing, isDownloading, setIsDow
                   )}
                 </TouchableOpacity>
 
-                <TouchableOpacity style={[styles.iconBtn, { backgroundColor: 'rgba(212, 175, 55, 0.15)' }]} onPress={() => openPersonaModal(track.id)}>
+                <TouchableOpacity style={[styles.iconBtn, { backgroundColor: 'rgba(212, 175, 55, 0.15)' }]} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); openExtendModal(track.id, track.title || task.title); }}>
+                  <Ionicons name="add-circle-outline" size={18} color={COLORS.gold} />
+                </TouchableOpacity>
+
+                <TouchableOpacity style={[styles.iconBtn, { backgroundColor: 'rgba(212, 175, 55, 0.15)' }]} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); openPersonaModal(track.id); }}>
                   <Ionicons name="person-add" size={18} color={COLORS.gold} />
                 </TouchableOpacity>
               </View>
@@ -492,8 +558,8 @@ const getStyles = (COLORS: any) => StyleSheet.create({
   trackRow: { flexDirection: 'row', marginTop: 8, padding: 10, backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
   trackImg: { width: 70, height: 70, borderRadius: 10 },
   playOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  trackTitle: { color: COLORS.textPrimary, fontSize: 15, fontWeight: '700', marginBottom: 8 },
-  trackActions: { flexDirection: 'row', gap: 6, alignItems: 'center' },
+  trackTitle: { color: COLORS.textPrimary, fontSize: 15, fontWeight: '700', marginBottom: 4 },
+  trackActions: { flexDirection: 'row', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginTop: 4 },
   actionBtn: { paddingHorizontal: 10, height: 30, borderRadius: 15, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 4 },
   iconBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
   actionText: { fontSize: 12, fontWeight: '700' },
