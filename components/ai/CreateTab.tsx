@@ -146,6 +146,25 @@ export default function CreateTab({ onGenerateSuccess, openLyricsModal }: Create
         <TextInput style={styles.input} placeholder="e.g. Acoustic pop, upbeat" placeholderTextColor={COLORS.textTertiary} value={style} onChangeText={(t) => { setStyle(t); setMissingFields(m => m.filter(f => f !== 'style')); }} />
       </View>
 
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12, marginBottom: 4 }}>
+        {['Bongo Flava', 'Amapiano', 'Afrobeats', 'R&B', 'Gospel', 'Hip Hop'].map((s) => (
+          <TouchableOpacity 
+            key={s} 
+            style={[styles.personaPill, style.includes(s) && styles.personaPillActive]}
+            onPress={() => {
+              if (style.includes(s)) {
+                setStyle(style.replace(s, '').replace(/^,\s*|,\s*$/g, '').replace(/,\s*,/g, ',').trim());
+              } else {
+                setStyle(style ? `${style}, ${s}` : s);
+              }
+              setMissingFields(m => m.filter(f => f !== 'style'));
+            }}
+          >
+            <Text style={[styles.personaPillText, style.includes(s) && styles.personaPillTextActive]}>{s}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, marginBottom: 8 }}>
         <Text style={[styles.label, { marginTop: 0, marginBottom: 0 }]}>Lyrics</Text>
         <TouchableOpacity style={styles.autoWriteBtn} onPress={() => openLyricsModal(setLyrics)}>
