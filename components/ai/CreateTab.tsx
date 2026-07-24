@@ -42,7 +42,12 @@ export default function CreateTab({ onGenerateSuccess, openLyricsModal }: Create
   const [selectedPersona, setSelectedPersona] = useState<string | null>(null);
 
   const handleGenerate = async () => {
-    if (!title || !style || !lyrics) {
+    // If a persona is selected, default missing fields so it's easier to generate
+    const finalTitle = title.trim() || (selectedPersona ? "My Custom Song" : "");
+    const finalStyle = style.trim() || (selectedPersona ? "Pop, vocal" : "");
+    const finalLyrics = lyrics.trim();
+
+    if (!finalTitle || !finalStyle || !finalLyrics) {
       Alert.alert("Missing Fields", "Please fill out title, style, and lyrics.");
       return;
     }
@@ -75,9 +80,9 @@ export default function CreateTab({ onGenerateSuccess, openLyricsModal }: Create
         }
       }
       
-      const taskId = await generateMusic(lyrics, style, title, null, vocalGender, weirdness, styleInfluence, selectedPersona || undefined);
+      const taskId = await generateMusic(finalLyrics, finalStyle, finalTitle, null, vocalGender, weirdness, styleInfluence, selectedPersona || undefined);
       
-      addTask(taskId, title);
+      addTask(taskId, finalTitle);
       
       setTitle('');
       setStyle('');
