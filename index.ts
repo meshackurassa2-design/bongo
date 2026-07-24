@@ -2,9 +2,6 @@ import { Alert } from 'react-native';
 import 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
-import TrackPlayer from 'react-native-track-player';
-import playbackService from './service';
-TrackPlayer.registerPlaybackService(() => playbackService);
 
 // Catch any unhandled JS errors and show them in a native alert before crashing
 const originalHandler = global.ErrorUtils?.getGlobalHandler();

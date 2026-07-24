@@ -112,15 +112,7 @@ export default function PlayerScreen() {
 
   const lyricsScrollRef = useRef<FlatList>(null);
 
-  useEffect(() => {
-    if (showLyrics && lyricsScrollRef.current && activeLyricIndex >= 0 && parsedLyrics) {
-      try {
-        lyricsScrollRef.current.scrollToIndex({ index: activeLyricIndex, animated: true, viewPosition: 0.5 });
-      } catch (e) {
-        // FlatList scrollToIndex might fail if items are not rendered yet
-      }
-    }
-  }, [activeLyricIndex, showLyrics, parsedLyrics]);
+
 
   const activeLyricIndex = useMemo(() => {
     if (!parsedLyrics) return -1;
@@ -131,6 +123,16 @@ export default function PlayerScreen() {
     }
     return 0;
   }, [positionMs, parsedLyrics]);
+
+  useEffect(() => {
+    if (showLyrics && lyricsScrollRef.current && activeLyricIndex >= 0 && parsedLyrics) {
+      try {
+        lyricsScrollRef.current.scrollToIndex({ index: activeLyricIndex, animated: true, viewPosition: 0.5 });
+      } catch (e) {
+        // FlatList scrollToIndex might fail if items are not rendered yet
+      }
+    }
+  }, [activeLyricIndex, showLyrics, parsedLyrics]);
 
   const openPlaylistModal = async () => {
     if (!session) {
@@ -239,7 +241,7 @@ export default function PlayerScreen() {
           Animated.timing(flyX, { toValue: 0, duration: 600, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
           Animated.timing(flyY, { toValue: 0, duration: 600, easing: Easing.inOut(Easing.ease), useNativeDriver: true })
         ])
-      ]).start(({ finished }) => {
+      ]).start(({ finished }: { finished: boolean }) => {
         if (finished && isMounted) flyAnim();
       });
     };

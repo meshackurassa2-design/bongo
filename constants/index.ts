@@ -124,6 +124,8 @@ export type Track = {
   is_public: boolean;
   is_ai?: boolean;
   lyrics?: string | null;
+  lyrics_swahili?: string | null;
+  lyrics_english?: string | null;
   created_at: string;
   profile?: Profile;
 };
