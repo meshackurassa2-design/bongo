@@ -12,6 +12,7 @@ import { Track } from '../constants';
 import { useOfflineStore } from './offlineStore';
 import { supabase } from '../lib/supabase';
 import * as Haptics from 'expo-haptics';
+import { Alert } from 'react-native';
 import React from 'react';
 
 // Re-export TrackPlayer hooks so components don't have to change
@@ -69,7 +70,11 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
   initPlayer: async () => {
     if (get().isPlayerReady) return;
     try {
-      await TrackPlayer.setupPlayer();
+      await TrackPlayer.setupPlayer({
+        iosCategory: 'playback', // equivalent to IOSCategory.Playback
+        iosCategoryMode: 'default',
+        iosCategoryOptions: ['allowBluetooth', 'allowBluetoothA2DP']
+      });
       await TrackPlayer.updateOptions({
         android: {
           appKilledPlaybackBehavior: AppKilledPlaybackBehavior.ContinuePlayback
@@ -94,6 +99,8 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
       // If it's already initialized, just set ready
       if (String(e).includes('already initialized')) {
         set({ isPlayerReady: true });
+      } else {
+        Alert.alert('Init Error', String(e));
       }
     }
   },
@@ -136,6 +143,7 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
       await TrackPlayer.play();
     } catch (e) {
       console.log('TrackPlayer play error:', e);
+      Alert.alert('Playback Error', String(e));
     }
   },
 
