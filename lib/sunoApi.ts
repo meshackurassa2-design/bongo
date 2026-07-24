@@ -351,7 +351,7 @@ export const uploadAndCoverAudio = async (
     customMode: true,
     instrumental: false,
     callBackUrl: "https://httpbin.org/post",
-    model: "V5" // Covers require V5
+    model: personaId ? "V5" : "V3_5" // Standard covers get stuck on V5, but Personas require V5
   };
 
   if (personaId) {
