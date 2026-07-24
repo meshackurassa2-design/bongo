@@ -156,8 +156,8 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
 
     MusicControl.setNowPlaying({
       title: track.title,
-      artwork: track.artwork_url,
-      artist: track.artist?.name || 'Unknown Artist',
+      artwork: track.cover_url || '',
+      artist: track.artist_name || 'Unknown Artist',
       duration: track.duration_sec || 0, 
     });
 
