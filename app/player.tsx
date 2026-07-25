@@ -111,6 +111,7 @@ export default function PlayerScreen() {
   const [myPlaylists, setMyPlaylists] = useState<any[]>([]);
   const [loadingPlaylists, setLoadingPlaylists] = useState(false);
   const [showLyrics, setShowLyrics] = useState(false);
+  const [isLyricsFullscreen, setIsLyricsFullscreen] = useState(false);
   const [lyricsLang, setLyricsLang] = useState<'swahili'|'english'>('swahili');
   const [showQueueModal, setShowQueueModal] = useState(false);
 
@@ -541,15 +542,22 @@ export default function PlayerScreen() {
           
           {/* Bilingual Toggle */}
           {(currentTrack?.lyrics_swahili || currentTrack?.lyrics_english) && (
-            <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 12, backgroundColor: COLORS.cardAlt, alignSelf: 'center', borderRadius: 20, padding: 4 }}>
-              <TouchableOpacity onPress={() => setLyricsLang('swahili')} style={{ paddingHorizontal: 16, paddingVertical: 6, borderRadius: 16, backgroundColor: lyricsLang === 'swahili' ? COLORS.gold : 'transparent' }}>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: lyricsLang === 'swahili' ? COLORS.black : COLORS.textSecondary }}>Swahili</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setLyricsLang('english')} style={{ paddingHorizontal: 16, paddingVertical: 6, borderRadius: 16, backgroundColor: lyricsLang === 'english' ? COLORS.gold : 'transparent' }}>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: lyricsLang === 'english' ? COLORS.black : COLORS.textSecondary }}>English</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingHorizontal: 4 }}>
+              <View style={{ flexDirection: 'row', backgroundColor: COLORS.cardAlt, borderRadius: 20, padding: 4 }}>
+                <TouchableOpacity onPress={() => setLyricsLang('swahili')} style={{ paddingHorizontal: 16, paddingVertical: 6, borderRadius: 16, backgroundColor: lyricsLang === 'swahili' ? COLORS.gold : 'transparent' }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: lyricsLang === 'swahili' ? COLORS.black : COLORS.textSecondary }}>Swahili</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setLyricsLang('english')} style={{ paddingHorizontal: 16, paddingVertical: 6, borderRadius: 16, backgroundColor: lyricsLang === 'english' ? COLORS.gold : 'transparent' }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: lyricsLang === 'english' ? COLORS.black : COLORS.textSecondary }}>English</Text>
+                </TouchableOpacity>
+              </View>
+              
+              <TouchableOpacity onPress={() => setIsLyricsFullscreen(true)} style={{ padding: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 20 }}>
+                <Ionicons name="expand" size={18} color={COLORS.gold} />
               </TouchableOpacity>
             </View>
           )}
+
 
           {parsedLyrics ? (<FlatList 
             ref={lyricsScrollRef}
@@ -1016,6 +1024,54 @@ export default function PlayerScreen() {
               <Text style={styles.closeModalText}>Close</Text>
             </TouchableOpacity>
           </View>
+        </View>
+      </Modal>
+
+      {/* Fullscreen Lyrics Modal */}
+      <Modal visible={isLyricsFullscreen} transparent animationType="slide">
+        <View style={{ flex: 1, backgroundColor: 'rgba(10,10,12,0.98)', paddingTop: 50 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, marginBottom: 16 }}>
+            <Text style={{ color: COLORS.textPrimary, fontSize: 18, fontWeight: '800' }}>Lyrics</Text>
+            <TouchableOpacity onPress={() => setIsLyricsFullscreen(false)} style={{ padding: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 24 }}>
+              <Ionicons name="contract" size={24} color={COLORS.gold} />
+            </TouchableOpacity>
+          </View>
+          
+          {(currentTrack?.lyrics_swahili || currentTrack?.lyrics_english) && (
+            <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 24 }}>
+              <View style={{ flexDirection: 'row', backgroundColor: COLORS.cardAlt, borderRadius: 20, padding: 4 }}>
+                <TouchableOpacity onPress={() => setLyricsLang('swahili')} style={{ paddingHorizontal: 20, paddingVertical: 8, borderRadius: 16, backgroundColor: lyricsLang === 'swahili' ? COLORS.gold : 'transparent' }}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: lyricsLang === 'swahili' ? COLORS.black : COLORS.textSecondary }}>Swahili</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setLyricsLang('english')} style={{ paddingHorizontal: 20, paddingVertical: 8, borderRadius: 16, backgroundColor: lyricsLang === 'english' ? COLORS.gold : 'transparent' }}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: lyricsLang === 'english' ? COLORS.black : COLORS.textSecondary }}>English</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+          
+          {parsedLyrics ? (
+            <FlatList 
+              data={parsedLyrics}
+              keyExtractor={(item, index) => index.toString()}
+              style={{ flex: 1, paddingHorizontal: 24 }} 
+              contentContainerStyle={{ paddingVertical: 40, paddingBottom: 150, alignItems: 'center' }}
+              showsVerticalScrollIndicator={false}
+              renderItem={({ item, index }) => {
+                const isActive = index === activeLyricIndex;
+                const isNext = index === activeLyricIndex + 1;
+                const isPrev = index === activeLyricIndex - 1;
+                return <LyricLine text={item.text} isActive={isActive} isNext={isNext} isPrev={isPrev} COLORS={COLORS} />;
+              }}
+            />
+          ) : (
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="mic-off-outline" size={64} color={COLORS.textTertiary} />
+              <Text style={{ color: COLORS.textSecondary, marginTop: 16, fontSize: 16, fontWeight: '600' }}>No lyrics available.</Text>
+            </View>
+          )}
+          
+          <LinearGradient colors={['transparent', 'rgba(10,10,12,0.9)']} style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 100 }} pointerEvents="none" />
         </View>
       </Modal>
 
