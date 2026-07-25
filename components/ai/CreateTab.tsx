@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Alert, ScrollView, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
 import * as DocumentPicker from 'expo-document-picker';
@@ -29,6 +29,7 @@ export default function CreateTab({ onGenerateSuccess, openLyricsModal }: Create
   const [title, setTitle] = useState('');
   const [style, setStyle] = useState('');
   const [lyrics, setLyrics] = useState('');
+  const [isLyricsFullscreen, setIsLyricsFullscreen] = useState(false);
   
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [vocalGender, setVocalGender] = useState<'Male' | 'Female' | 'Any'>('Any');
@@ -166,7 +167,12 @@ export default function CreateTab({ onGenerateSuccess, openLyricsModal }: Create
       </ScrollView>
 
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, marginBottom: 8 }}>
-        <Text style={[styles.label, { marginTop: 0, marginBottom: 0 }]}>Lyrics</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Text style={[styles.label, { marginTop: 0, marginBottom: 0, marginRight: 8 }]}>Lyrics</Text>
+          <TouchableOpacity onPress={() => setIsLyricsFullscreen(true)} style={{ padding: 6, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12 }}>
+            <Ionicons name="expand" size={16} color={COLORS.gold} />
+          </TouchableOpacity>
+        </View>
         <TouchableOpacity style={styles.autoWriteBtn} onPress={() => openLyricsModal(setLyrics)}>
           <LinearGradient colors={[COLORS.gold, '#FFD700']} start={{x: 0, y: 0}} end={{x: 1, y: 1}} style={[StyleSheet.absoluteFill, { borderRadius: 16 }]} />
           <Ionicons name="sparkles" size={14} color={COLORS.black} />
