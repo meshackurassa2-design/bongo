@@ -77,7 +77,10 @@ export const generateMusic = async (
     if (typeof styleInfluence === 'number') payload.style_influence = styleInfluence;
   }
 
-  if (personaId) payload.personaId = personaId;
+  if (personaId) {
+    payload.personaId = personaId;
+    if (provider === 'kie') payload.personaModel = 'style_persona'; // required by Kie AI for V5_5
+  }
   if (uploadUrl) payload.uploadUrl = uploadUrl;
 
   const response = await fetch(`${baseUrl}/generate`, {
@@ -347,6 +350,7 @@ export const uploadAndCoverAudio = async (
 
   if (personaId) {
     payload.personaId = personaId;
+    if (provider === 'kie') payload.personaModel = 'style_persona'; // required by Kie AI for V5_5
   }
   
   if (audioId) payload.audioId = audioId;
