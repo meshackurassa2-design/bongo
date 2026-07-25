@@ -1,10 +1,11 @@
-import { create } from 'zustand';
+﻿import { create } from 'zustand';
 import { Audio, AVPlaybackStatus } from 'expo-av';
 import { Track } from '../constants';
 import { useOfflineStore } from './offlineStore';
 import { useAuthStore } from './authStore';
 import { supabase } from '../lib/supabase';
 import * as Haptics from 'expo-haptics';
+import MusicControl, { Command } from 'react-native-music-control';
 
 // ΓöÇΓöÇ Fake State enum matching TrackPlayer's API surface so UI components don't need to change ΓöÇΓöÇ
 export enum State {
@@ -81,7 +82,6 @@ type PlayerStore = {
   initPlayer: () => Promise<void>;
   playTrack: (track: Track, queue?: Track[]) => Promise<void>;
   togglePlayPause: () => Promise<void>;
-  pause: () => Promise<void>;
   skipNext: () => Promise<void>;
   skipPrev: () => Promise<void>;
   seekTo: (ms: number) => Promise<void>;
@@ -95,7 +95,6 @@ type PlayerStore = {
   setMode: (mode: PlayerMode, stationId?: string) => void;
   setVolume: (volume: number) => Promise<void>;
   addTrackToQueue: (track: Track) => void;
-  removeTrackFromQueue: (index: number) => void;
   reorderQueue: (from: number, to: number) => void;
 };
 
@@ -120,9 +119,21 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
         playsInSilentModeIOS: true,
         shouldDuckAndroid: true,
         playThroughEarpieceAndroid: false,
-        interruptionModeIOS: 1, // INTERRUPTION_MODE_IOS_DO_NOT_MIX
-        interruptionModeAndroid: 1, // INTERRUPTION_MODE_ANDROID_DO_NOT_MIX
       });
+
+      MusicControl.enableBackgroundMode(true);
+      MusicControl.enableControl('play', true);
+      MusicControl.enableControl('pause', true);
+      MusicControl.enableControl('nextTrack', true);
+      MusicControl.enableControl('previousTrack', true);
+      MusicControl.enableControl('seek', true);
+
+      MusicControl.on(Command.play, () => { get().togglePlayPause(); });
+      MusicControl.on(Command.pause, () => { get().togglePlayPause(); });
+      MusicControl.on(Command.nextTrack, () => { get().skipNext(); });
+      MusicControl.on(Command.previousTrack, () => { get().skipPrev(); });
+      MusicControl.on(Command.seek, (time) => { get().seekTo(time * 1000); });
+
       set({ isPlayerReady: true });
     } catch (e) {
       console.log('expo-av Audio init error:', e);
@@ -162,9 +173,8 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
       await oldSound.unloadAsync().catch(() => {});
     }
 
-    // Use decrypted DRM track if available offline
-    const decryptedUri = await useOfflineStore.getState().getDecryptedUri(track.id);
-    const url = decryptedUri || track.audio_url;
+    const localUri = useOfflineStore.getState().getLocalUri(track.id);
+    const url = localUri || track.audio_url;
 
     try {
       const { sound } = await Audio.Sound.createAsync(
@@ -184,10 +194,13 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
           try {
             if (status.isPlaying) {
               notifyPlaybackState(State.Playing);
+              MusicControl.updatePlayback({ state: MusicControl.STATE_PLAYING, elapsedTime: status.positionMillis / 1000 });
             } else if (status.isBuffering) {
               notifyPlaybackState(State.Buffering);
+              MusicControl.updatePlayback({ state: MusicControl.STATE_BUFFERING, elapsedTime: status.positionMillis / 1000 });
             } else {
               notifyPlaybackState(State.Paused);
+              MusicControl.updatePlayback({ state: MusicControl.STATE_PAUSED, elapsedTime: status.positionMillis / 1000 });
             }
           } catch(e) {}
 
@@ -218,17 +231,17 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
       
       _sound = sound;
 
-      // Update iOS/Android lock screen Now Playing info
       try {
-        await Audio.setAudioModeAsync({
-          staysActiveInBackground: true,
-          playsInSilentModeIOS: true,
-          shouldDuckAndroid: true,
-          playThroughEarpieceAndroid: false,
-          interruptionModeIOS: 1,
-          interruptionModeAndroid: 1,
+        MusicControl.setNowPlaying({
+          title: track.title,
+          artwork: track.cover_url || 'https://via.placeholder.com/150',
+          artist: track.artist_name || 'Unknown Artist',
+          duration: track.duration_sec || 0, 
         });
-      } catch(e) {}
+        MusicControl.updatePlayback({ state: MusicControl.STATE_PLAYING, elapsedTime: 0 });
+      } catch (e) {
+        console.log('MusicControl error:', e);
+      }
     } catch (e) {
       console.log('expo-av playTrack error:', e);
       // Only set error state if this is still the active track
@@ -250,14 +263,6 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     } else {
       await _sound.playAsync();
       notifyPlaybackState(State.Playing);
-    }
-  },
-
-  pause: async () => {
-    if (_sound && _currentPlaybackState === State.Playing) {
-      await _sound.pauseAsync();
-      _currentPlaybackState = State.Paused;
-      notifyPlaybackState(State.Paused);
     }
   },
 
@@ -374,14 +379,6 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
 
   addTrackToQueue: (track: Track) => {
     set(state => ({ queue: [...state.queue, track] }));
-  },
-
-  removeTrackFromQueue: (index: number) => {
-    set(state => {
-      const newQueue = [...state.queue];
-      newQueue.splice(index, 1);
-      return { queue: newQueue };
-    });
   },
 
   reorderQueue: (from, to) => {

@@ -11,10 +11,11 @@ import { useThemeStore } from '../../store/themeStore';
 
 interface ExtractPersonaModalProps {
   audioId: string | null;
+  taskId?: string | null;
   onClose: () => void;
 }
 
-export default function ExtractPersonaModal({ audioId, onClose }: ExtractPersonaModalProps) {
+export default function ExtractPersonaModal({ audioId, taskId, onClose }: ExtractPersonaModalProps) {
   const { COLORS } = useThemeStore();
   const styles = getStyles(COLORS);
   const [personaName, setPersonaName] = useState('');
@@ -31,7 +32,7 @@ export default function ExtractPersonaModal({ audioId, onClose }: ExtractPersona
 
     setIsExtracting(true);
     try {
-      const personaId = await generatePersona(audioId, personaName, personaDesc);
+      const personaId = await generatePersona(audioId, personaName, personaDesc, taskId || undefined);
       addPersona({
         id: personaId,
         name: personaName,

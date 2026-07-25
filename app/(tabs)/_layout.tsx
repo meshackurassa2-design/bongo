@@ -53,10 +53,10 @@ export default function TabsLayout() {
           }}
         />
         <Tabs.Screen
-          name="search"
+          name="discover"
           options={{
-            title: t('tabs.search'),
-            tabBarIcon: ({ color }) => <TabBarIcon name="search" color={color} />,
+            title: "Discover",
+            tabBarIcon: ({ color }) => <TabBarIcon name="compass" color={color} />,
           }}
         />
         <Tabs.Screen
@@ -84,7 +84,7 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="library"
           options={{
-            title: "Library",
+            title: "Workspace",
             tabBarIcon: ({ color }) => <TabBarIcon name="library" color={color} />,
           }}
         />

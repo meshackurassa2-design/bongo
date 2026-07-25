@@ -129,6 +129,7 @@ export default function ProfileScreen() {
             <MenuRow icon="calendar" label="Admin Panel: Manage Events" iconColor={COLORS.error} onPress={() => router.push('/admin/events')} styles={styles} COLORS={COLORS} />
             <MenuRow icon="shield-checkmark" label="Admin Panel: Manage Tickets" iconColor={COLORS.error} onPress={() => router.push('/admin/tickets')} styles={styles} COLORS={COLORS} />
             <MenuRow icon="checkmark-done-circle" label="Admin Panel: Verifications" iconColor={COLORS.error} onPress={() => router.push('/admin/verifications')} styles={styles} COLORS={COLORS} />
+            <MenuRow icon="warning" label="Admin Panel: DMCA Reports" iconColor={COLORS.error} onPress={() => router.push('/admin/reports')} styles={styles} COLORS={COLORS} />
           </>
         )}
         {(profile.role === 'artist' || profile.role === 'admin') && (
@@ -221,9 +222,9 @@ const getStyles = (COLORS: any) => StyleSheet.create({
   locationRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 8 },
   location: { color: COLORS.textTertiary, fontSize: 13 },
   sectionTitle: { color: COLORS.textSecondary, fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1.2, marginHorizontal: 24, marginTop: 32, marginBottom: 8 },
-  settingsGroup: { backgroundColor: COLORS.card, borderRadius: 20, marginHorizontal: 16, marginTop: 12, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.divider },
-  menuRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 16, gap: 16, borderBottomWidth: 1, borderBottomColor: COLORS.divider },
-  menuRowLast: { borderBottomWidth: 0 },
+  settingsGroup: { marginTop: 12, paddingBottom: 8 },
+  menuRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 16, gap: 16 },
+  menuRowLast: {},
   menuIconBox: { width: 38, height: 38, borderRadius: 12, backgroundColor: COLORS.cardAlt, justifyContent: 'center', alignItems: 'center' },
   menuLabel: { flex: 1, color: COLORS.textPrimary, fontSize: 16, fontWeight: '600' },
   signOutText: { color: COLORS.error, fontSize: 16, fontWeight: '700' },

@@ -86,7 +86,8 @@ export default function UploadCoverTab({ onGenerateSuccess, openLyricsModal }: U
       const finalAudioUrl = supabase.storage.from('audio').getPublicUrl(`uploads/${fileName}`).data.publicUrl;
       setIsUploadingAudio(false);
 
-      const taskId = await uploadAndCoverAudio(coverPrompt, coverStyle, coverTitle, selectedPersona || undefined, undefined, finalAudioUrl);
+      const isVoicePersona = personas.find(p => p.id === selectedPersona)?.description === "Custom Voice Clone";
+      const taskId = await uploadAndCoverAudio(coverPrompt, coverStyle, coverTitle, selectedPersona || undefined, undefined, finalAudioUrl, isVoicePersona);
       addTask(taskId, coverTitle);
       
       setCoverTitle('');

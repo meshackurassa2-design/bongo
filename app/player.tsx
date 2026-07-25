@@ -7,15 +7,18 @@ import { useRouter } from 'expo-router';
 import Slider from '@react-native-community/slider';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import * as ScreenCapture from 'expo-screen-capture';
 import { ResizeMode, Video } from 'expo-av';
 import { usePlayerStore } from '../store/playerStore';
 import { useOfflineStore } from '../store/offlineStore';
 import { useThemeStore } from '../store/themeStore';
 import { useAuthStore } from '../store/authStore';
 import { supabase } from '../lib/supabase';
+import ShareCardModal from '../components/ShareCardModal';
 import { ScrollView, FlatList } from 'react-native';
 import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
 import { useProgress, usePlaybackState, State } from '../store/playerStore';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const LyricLine = ({ text, isActive, isNext, isPrev, COLORS }: { text: string, isActive: boolean, isNext: boolean, isPrev: boolean, COLORS: any }) => {
   const anim = useRef(new Animated.Value(0)).current;
@@ -72,6 +75,7 @@ export default function PlayerScreen() {
   const { COLORS } = useThemeStore();
   const styles = getStyles(COLORS);
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const {
     currentTrack,
     queue,
@@ -111,6 +115,7 @@ export default function PlayerScreen() {
   const [myPlaylists, setMyPlaylists] = useState<any[]>([]);
   const [loadingPlaylists, setLoadingPlaylists] = useState(false);
   const [showLyrics, setShowLyrics] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [isLyricsFullscreen, setIsLyricsFullscreen] = useState(false);
   const [lyricsLang, setLyricsLang] = useState<'swahili'|'english'>('swahili');
   const [showQueueModal, setShowQueueModal] = useState(false);
@@ -219,24 +224,49 @@ export default function PlayerScreen() {
     }
   };
 
+  useEffect(() => {
+    // Prevent screen capture while player is active
+    ScreenCapture.preventScreenCaptureAsync();
+
+    return () => {
+      ScreenCapture.allowScreenCaptureAsync();
+    };
+  }, []);
+
   const handleShare = async () => {
     if (!currentTrack) return;
-    try {
-      setIsSharing(true);
-      const { Share } = require('react-native');
-      const shareLink = `https://bongostream.app/song/${currentTrack.id}`;
-      const shareMessage = `Inacheza sasa: "${currentTrack.title}" na ${currentTrack.artist_name} kwenye BongoStream!\n\nSikiliza hapa: ${shareLink}`;
-      
-      await Share.share({
-        message: shareMessage,
-        title: currentTrack.title,
-      });
-    } catch (e: any) {
-      console.error(e);
-      Alert.alert('Error', 'Failed to share track');
-    } finally {
-      setIsSharing(false);
-    }
+    setShowShareModal(true);
+  };
+
+  const handleReport = () => {
+    Alert.alert(
+      "Ripoti Hakimiliki",
+      "Je, wimbo huu unatumia kazi yako bila ruhusa? (Report Copyright Infringement)",
+      [
+        { text: "Hapana", style: "cancel" },
+        { 
+          text: "Ndiyo, Ripoti", 
+          style: "destructive",
+          onPress: async () => {
+            if (!session) {
+              Alert.alert("Kosa", "Ingia kwenye akaunti yako ili kutoa ripoti.");
+              return;
+            }
+            try {
+              const { error } = await supabase.from('copyright_reports').insert({
+                track_id: currentTrack.id,
+                reporter_id: session.user.id,
+                reason: 'Unauthorized use of copyrighted material'
+              });
+              if (error) throw error;
+              Alert.alert("Asante", "Ripoti yako imepokelewa na itachunguzwa na usimamizi.");
+            } catch (e: any) {
+              Alert.alert("Kosa", e.message);
+            }
+          }
+        }
+      ]
+    );
   };
 
   // Animation values
@@ -510,8 +540,23 @@ export default function PlayerScreen() {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  let currentQuote = "";
+  if (parsedLyrics && parsedLyrics.length > 0) {
+    if (activeLyricIndex >= 0 && activeLyricIndex < parsedLyrics.length) {
+      currentQuote = parsedLyrics[activeLyricIndex].text;
+      if (activeLyricIndex + 1 < parsedLyrics.length) {
+        currentQuote += `\n${parsedLyrics[activeLyricIndex + 1].text}`;
+      }
+    } else {
+      currentQuote = parsedLyrics[0].text;
+      if (parsedLyrics.length > 1) {
+        currentQuote += `\n${parsedLyrics[1].text}`;
+      }
+    }
+  }
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top + 28 }]}>
       {/* Canvas Video Background */}
       <Video
         source={{ uri: 'https://cdn.pixabay.com/video/2018/01/22/13859-252504829_tiny.mp4' }}
@@ -563,7 +608,7 @@ export default function PlayerScreen() {
             ref={lyricsScrollRef}
             data={parsedLyrics}
             keyExtractor={(item, index) => index.toString()}
-            style={{ width: width - 60, height: width - 60, alignSelf: 'center', paddingHorizontal: 20 }} 
+            style={{ width: width - 60, height: width - 60, alignSelf: 'center', paddingHorizontal: 32 }} 
             contentContainerStyle={{ paddingVertical: 100, alignItems: 'center' }}
             showsVerticalScrollIndicator={false}
             initialNumToRender={100}
@@ -823,6 +868,28 @@ export default function PlayerScreen() {
               UP NEXT
             </Text>
           </TouchableOpacity>
+          <TouchableOpacity 
+            style={{ 
+              flexDirection: 'row', 
+              alignItems: 'center', 
+              gap: 6, 
+              paddingHorizontal: 16, 
+              paddingVertical: 8, 
+              borderRadius: 20, 
+              backgroundColor: 'rgba(255, 60, 60, 0.1)' 
+            }}
+            onPress={handleReport}
+          >
+            <Ionicons name="warning" size={16} color="#ff5555" />
+            <Text style={{ 
+              color: '#ff5555', 
+              fontWeight: '800', 
+              fontSize: 12,
+              letterSpacing: 1
+            }}>
+              REPORT
+            </Text>
+          </TouchableOpacity>
         </ScrollView>
       </View>
 
@@ -1036,26 +1103,12 @@ export default function PlayerScreen() {
               <Ionicons name="contract" size={24} color={COLORS.gold} />
             </TouchableOpacity>
           </View>
-          
-          {(currentTrack?.lyrics_swahili || currentTrack?.lyrics_english) && (
-            <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 24 }}>
-              <View style={{ flexDirection: 'row', backgroundColor: COLORS.cardAlt, borderRadius: 20, padding: 4 }}>
-                <TouchableOpacity onPress={() => setLyricsLang('swahili')} style={{ paddingHorizontal: 20, paddingVertical: 8, borderRadius: 16, backgroundColor: lyricsLang === 'swahili' ? COLORS.gold : 'transparent' }}>
-                  <Text style={{ fontSize: 14, fontWeight: '700', color: lyricsLang === 'swahili' ? COLORS.black : COLORS.textSecondary }}>Swahili</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => setLyricsLang('english')} style={{ paddingHorizontal: 20, paddingVertical: 8, borderRadius: 16, backgroundColor: lyricsLang === 'english' ? COLORS.gold : 'transparent' }}>
-                  <Text style={{ fontSize: 14, fontWeight: '700', color: lyricsLang === 'english' ? COLORS.black : COLORS.textSecondary }}>English</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-          
+          {/* ... existing fullscreen lyrics ... */}
           {parsedLyrics ? (
             <FlatList 
               data={parsedLyrics}
               keyExtractor={(item, index) => index.toString()}
-              style={{ flex: 1, paddingHorizontal: 24 }} 
-              contentContainerStyle={{ paddingVertical: 40, paddingBottom: 150, alignItems: 'center' }}
+              contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 100 }}
               showsVerticalScrollIndicator={false}
               renderItem={({ item, index }) => {
                 const isActive = index === activeLyricIndex;
@@ -1066,22 +1119,25 @@ export default function PlayerScreen() {
             />
           ) : (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-              <Ionicons name="mic-off-outline" size={64} color={COLORS.textTertiary} />
-              <Text style={{ color: COLORS.textSecondary, marginTop: 16, fontSize: 16, fontWeight: '600' }}>No lyrics available.</Text>
+              <Text style={{ color: COLORS.textSecondary }}>No synced lyrics available.</Text>
             </View>
           )}
-          
-          <LinearGradient colors={['transparent', 'rgba(10,10,12,0.9)']} style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 100 }} pointerEvents="none" />
         </View>
       </Modal>
 
+      <ShareCardModal 
+        visible={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        track={currentTrack}
+        quote={currentQuote}
+      />
     </View>
   );
 }
 
 const getStyles = (COLORS: any) => StyleSheet.create({
-  container: { flex: 1, paddingTop: 40 },
-  header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: 16, marginBottom: 20 },
+  container: { flex: 1 },
+  header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: 16, marginBottom: 8 },
   iconBtn: { padding: 8, width: 56, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1, marginTop: 14 },
   coverWrap: { alignItems: 'center', justifyContent: 'center', marginBottom: 24, position: 'relative', width: width - 60, height: width - 60, alignSelf: 'center' },

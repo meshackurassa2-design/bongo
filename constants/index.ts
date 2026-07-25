@@ -4,9 +4,9 @@ export const THEMES = {
     darkSurface: '#12121A',
     card: '#1C1C28',
     cardAlt: '#22222E',
-    gold: '#FFB830',
-    goldLight: '#FFD45C',
-    goldDark: '#CC8A00',
+    gold: '#50C878', // Emerald Green
+    goldLight: '#8CE3A7',
+    goldDark: '#2E8C4A',
     green: '#1DB954',
     textPrimary: '#FFFFFF',
     textSecondary: '#B3B3C8',
@@ -88,6 +88,24 @@ export const THEMES = {
     white: '#FFFFFF',
     success: '#4CAF50',
     transparent: 'transparent',
+  },
+  spotify: {
+    black: '#000000',
+    darkSurface: '#121212',
+    card: '#181818',
+    cardAlt: '#282828',
+    gold: '#1DB954', // Main Spotify Green accent
+    goldLight: '#1ED760',
+    goldDark: '#1AA34A',
+    green: '#1DB954',
+    textPrimary: '#FFFFFF',
+    textSecondary: '#B3B3B3',
+    textTertiary: '#7F7F7F',
+    divider: '#282828',
+    error: '#E91429',
+    white: '#FFFFFF',
+    success: '#1DB954',
+    transparent: 'transparent',
   }
 };
 
@@ -122,8 +140,8 @@ export type Track = {
   like_count: number;
   description: string | null;
   is_public: boolean;
+  lyrics?: string;
   is_ai?: boolean;
-  lyrics?: string | null;
   lyrics_swahili?: string | null;
   lyrics_english?: string | null;
   created_at: string;

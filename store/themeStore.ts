@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { THEMES } from '../constants';
 
-export type ThemeType = 'luxury' | 'love' | 'ocean' | 'cyberpunk' | 'forest';
+export type ThemeType = 'luxury' | 'love' | 'ocean' | 'cyberpunk' | 'forest' | 'spotify';
 
 interface ThemeState {
   theme: ThemeType;
@@ -14,8 +14,8 @@ interface ThemeState {
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set) => ({
-      theme: 'luxury',
-      COLORS: THEMES.luxury,
+      theme: 'spotify',
+      COLORS: THEMES.spotify,
       setTheme: (theme: ThemeType) => set({ theme, COLORS: THEMES[theme] }),
     }),
     {

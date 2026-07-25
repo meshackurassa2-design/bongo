@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, ScrollView, Platform, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -19,13 +19,15 @@ import ExtendModal from './ExtendModal';
 
 
 interface WorkspaceTabProps {
-  openPersonaModal: (audioId: string) => void;
+  openPersonaModal: (audioId: string, taskId: string) => void;
+  navigateToTab?: (tab: string) => void;
 }
 
-export default function WorkspaceTab({ openPersonaModal }: WorkspaceTabProps) {
+export default function WorkspaceTab({ openPersonaModal, navigateToTab }: WorkspaceTabProps) {
   const { COLORS } = useThemeStore();
   const styles = getStyles(COLORS);
   const { tasks } = useAIStore();
+  const { profile } = useAuthStore();
   const [isPublishing, setIsPublishing] = useState<Record<string, boolean>>({});
   const [isDownloading, setIsDownloading] = useState<Record<string, boolean>>({});
   const [isGeneratingVideo, setIsGeneratingVideo] = useState<Record<string, boolean>>({});
@@ -51,35 +53,104 @@ export default function WorkspaceTab({ openPersonaModal }: WorkspaceTabProps) {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
-      <View style={styles.header}>
-        <Text style={styles.sectionTitle}>Your AI Assets</Text>
-      </View>
-
-      {tasks.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Ionicons name="folder-open-outline" size={64} color="rgba(255,255,255,0.2)" />
-          <Text style={styles.emptyText}>Your workspace is empty.</Text>
-          <Text style={styles.emptySub}>Generate or cover audio to see it here.</Text>
+    <View style={styles.container}>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Workspace</Text>
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <TouchableOpacity style={styles.headerIconBtn}>
+              <Ionicons name="search" size={20} color={COLORS.textPrimary} />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.creditBadge, (profile?.credits || 0) <= 2 && { backgroundColor: 'rgba(255, 59, 48, 0.1)', borderColor: COLORS.error, borderWidth: 1 }]} 
+              onPress={() => router.push('/buy-credits')}
+            >
+              <Ionicons name="diamond" size={14} color={(profile?.credits || 0) <= 2 ? COLORS.error : COLORS.gold} />
+              <Text style={[styles.creditText, (profile?.credits || 0) <= 2 && { color: COLORS.error }]}>
+                {profile?.credits || 0}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      ) : (
-        tasks.map(task => (
-          <TaskItem 
-            key={task.taskId} 
-            task={task} 
-            isPublishing={isPublishing} 
-            setIsPublishing={setIsPublishing} 
-            isDownloading={isDownloading} 
-            setIsDownloading={setIsDownloading} 
-            isGeneratingVideo={isGeneratingVideo}
-            setIsGeneratingVideo={setIsGeneratingVideo}
-            isSeparating={isSeparating}
-            setIsSeparating={setIsSeparating}
-            openPersonaModal={openPersonaModal}
-            openExtendModal={openExtendModal}
-          />
-        ))
-      )}
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.cardsScroll} contentContainerStyle={{ paddingRight: 16 }}>
+          <TouchableOpacity onPress={() => navigateToTab && navigateToTab('Create')} activeOpacity={0.8}>
+            <LinearGradient colors={['#108c5c', '#1358BD']} style={styles.topCard}>
+              <Ionicons name="sparkles" size={28} color="#FFF" style={{ marginBottom: 12 }} />
+              <Text style={styles.topCardText}>Create Music</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigateToTab && navigateToTab('Personas')} activeOpacity={0.8}>
+            <LinearGradient colors={['#A81A8A', '#571096']} style={styles.topCard}>
+              <Ionicons name="mic" size={28} color="#FFF" style={{ marginBottom: 12 }} />
+              <Text style={styles.topCardText}>Voice Personas</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigateToTab && navigateToTab('Cover')} activeOpacity={0.8}>
+            <LinearGradient colors={['#C41427', '#800B17']} style={styles.topCard}>
+              <Ionicons name="disc" size={28} color="#FFF" style={{ marginBottom: 12 }} />
+              <Text style={styles.topCardText}>Cover Songs</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigateToTab && navigateToTab('Sounds')} activeOpacity={0.8}>
+            <LinearGradient colors={['#E59400', '#D34D00']} style={styles.topCard}>
+              <Ionicons name="volume-medium" size={28} color="#FFF" style={{ marginBottom: 12 }} />
+              <Text style={styles.topCardText}>Sound Effects</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </ScrollView>
+
+        <View style={styles.localLibrarySection}>
+          <TouchableOpacity style={styles.localLibraryRow}>
+            <Ionicons name="albums-outline" size={24} color={COLORS.textPrimary} style={{ marginRight: 16 }} />
+            <Text style={styles.localLibraryText}>Playlists</Text>
+            <Ionicons name="chevron-forward" size={20} color={COLORS.textTertiary} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.localLibraryRow}>
+            <Ionicons name="cloud-offline-outline" size={24} color={COLORS.textPrimary} style={{ marginRight: 16 }} />
+            <Text style={styles.localLibraryText}>Offline Songs</Text>
+            <Ionicons name="chevron-forward" size={20} color={COLORS.textTertiary} />
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.localLibraryRow, { borderBottomWidth: 0 }]}>
+            <Ionicons name="phone-portrait-outline" size={24} color={COLORS.textPrimary} style={{ marginRight: 16 }} />
+            <Text style={styles.localLibraryText}>Device Music</Text>
+            <Ionicons name="chevron-forward" size={20} color={COLORS.textTertiary} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.subHeader}>
+          <Text style={styles.subHeaderTitle}>My Songs</Text>
+          <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Text style={styles.filterText}>Filter</Text>
+            <Ionicons name="funnel" size={14} color={COLORS.textPrimary} />
+          </TouchableOpacity>
+        </View>
+
+        {tasks.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="folder-open-outline" size={64} color="rgba(255,255,255,0.2)" />
+            <Text style={styles.emptyText}>Your workspace is empty.</Text>
+            <Text style={styles.emptySub}>Generate or cover audio to see it here.</Text>
+          </View>
+        ) : (
+          tasks.map(task => (
+            <TaskItem 
+              key={task.taskId} 
+              task={task} 
+              isPublishing={isPublishing} 
+              setIsPublishing={setIsPublishing} 
+              isDownloading={isDownloading} 
+              setIsDownloading={setIsDownloading} 
+              isGeneratingVideo={isGeneratingVideo}
+              setIsGeneratingVideo={setIsGeneratingVideo}
+              isSeparating={isSeparating}
+              setIsSeparating={setIsSeparating}
+              openPersonaModal={openPersonaModal}
+              openExtendModal={openExtendModal}
+            />
+          ))
+        )}
+      </ScrollView>
 
       <ExtendModal 
          visible={extendModalVisible}
@@ -88,16 +159,30 @@ export default function WorkspaceTab({ openPersonaModal }: WorkspaceTabProps) {
          originalTitle={extendOriginalTitle}
          onSuccess={handleExtendSuccess}
       />
-    </ScrollView>
+    </View>
   );
 }
 
-function TaskItem({ task, isPublishing, setIsPublishing, isDownloading, setIsDownloading, isGeneratingVideo, setIsGeneratingVideo, isSeparating, setIsSeparating, openPersonaModal, openExtendModal }: { task: AISongTask, isPublishing: any, setIsPublishing: any, isDownloading: any, setIsDownloading: any, isGeneratingVideo: any, setIsGeneratingVideo: any, isSeparating: any, setIsSeparating: any, openPersonaModal: (id: string) => void, openExtendModal: (audioId: string, title: string) => void }) {
+export function TaskItem({ task, isPublishing, setIsPublishing, isDownloading, setIsDownloading, isGeneratingVideo, setIsGeneratingVideo, isSeparating, setIsSeparating, openPersonaModal, openExtendModal }: { task: AISongTask, isPublishing: any, setIsPublishing: any, isDownloading: any, setIsDownloading: any, isGeneratingVideo: any, setIsGeneratingVideo: any, isSeparating: any, setIsSeparating: any, openPersonaModal: (id: string, taskId: string) => void, openExtendModal: (audioId: string, title: string) => void }) {
   const { COLORS } = useThemeStore();
   const styles = getStyles(COLORS);
   const router = useRouter();
   const { updateTask, removeTask, updateTrack } = useAIStore();
   const [pollError, setPollError] = useState<string | null>(null);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [menuTrack, setMenuTrack] = useState<SunoAudioData | null>(null);
+
+  const openMenu = (track: SunoAudioData) => {
+    setMenuTrack(track);
+    setMenuVisible(true);
+  };
+
+  const formatDuration = (seconds: number) => {
+    if (!seconds) return '0:00';
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
 
   const handleGenerateVideo = async (track: SunoAudioData) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
@@ -169,6 +254,22 @@ function TaskItem({ task, isPublishing, setIsPublishing, isDownloading, setIsDow
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
+    
+    const refundCredit = async () => {
+      try {
+        const { profile, fetchProfile } = useAuthStore.getState();
+        if (profile?.id) {
+          const { error } = await supabase.rpc('deduct_credits', { user_id: profile.id, amount: -1 });
+          if (error) {
+             await supabase.from('profiles').update({ credits: profile.credits + 1 }).eq('id', profile.id);
+          }
+          await fetchProfile(profile.id);
+        }
+      } catch (e) {
+        console.error("Failed to refund credit", e);
+      }
+    };
+
     if (task.status === 'PENDING' || task.status === 'PROCESSING') {
       const poll = async () => {
         try {
@@ -185,10 +286,13 @@ function TaskItem({ task, isPublishing, setIsPublishing, isDownloading, setIsDow
              handleAutoDownload(task.taskId, mappedData);
           } else if (info.status === 'SENSITIVE_WORD_ERROR') {
              updateTask(task.taskId, 'SENSITIVE_WORD_ERROR');
+             refundCredit();
           } else if (info.status?.includes('FAILED') || info.status?.includes('ERROR')) {
              updateTask(task.taskId, 'FAILED', undefined, info.status);
+             refundCredit();
           } else if (info.status === 'SUCCESS' && !hasTracks) {
              updateTask(task.taskId, 'FAILED', undefined, 'SUCCESS but no audio returned');
+             refundCredit();
           }
         } catch (e: any) {
           setPollError(e.message || "Network error");
@@ -212,8 +316,10 @@ function TaskItem({ task, isPublishing, setIsPublishing, isDownloading, setIsDow
         handleAutoDownload(task.taskId, mappedData);
       } else if (info.status === 'SENSITIVE_WORD_ERROR') {
         updateTask(task.taskId, 'SENSITIVE_WORD_ERROR');
+        refundCredit();
       } else if (info.status === 'FAILED' || (info.status === 'SUCCESS' && !hasTracks)) {
         updateTask(task.taskId, 'FAILED');
+        refundCredit();
       }
     } catch (e: any) {
       Alert.alert("Error", e.message);
@@ -449,125 +555,161 @@ function TaskItem({ task, isPublishing, setIsPublishing, isDownloading, setIsDow
 
   return (
     <View style={styles.taskCard}>
-      <View style={styles.taskHeader}>
-        <Text style={styles.taskTitle}>{task.title}</Text>
-        <TouchableOpacity onPress={() => removeTask(task.taskId)} style={styles.trashBtn}>
-          <Ionicons name="trash-outline" size={18} color={COLORS.error} />
-        </TouchableOpacity>
-      </View>
-      
       {task.status === 'PENDING' || task.status === 'PROCESSING' ? (
-        <View style={styles.statusRow}>
-          <ActivityIndicator color={COLORS.gold} size="small" />
-          <View style={{ flex: 1, marginLeft: 12 }}>
-            <Text style={styles.statusText}>
-              {pollError ? `Retrying... (${pollError})` : 'AI is composing...'}
-            </Text>
+        <View style={styles.trackRow}>
+          <View style={[styles.trackImg, { backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center' }]}>
+            <ActivityIndicator color={COLORS.gold} />
           </View>
-          <TouchableOpacity onPress={manualCheck} style={styles.checkBtn}>
-            <Text style={{ color: COLORS.gold, fontSize: 11, fontWeight: '800' }}>CHECK</Text>
-          </TouchableOpacity>
+          <View style={{ flex: 1, marginLeft: 12, justifyContent: 'center' }}>
+            <Text style={styles.trackTitle}>{task.title}</Text>
+            <Text style={styles.trackSubtitle}>{pollError ? `Retrying... (${pollError})` : 'AI is composing...'}</Text>
+          </View>
         </View>
       ) : task.status === 'SENSITIVE_WORD_ERROR' ? (
-        <View style={styles.errorBanner}>
-          <Ionicons name="warning" size={16} color={COLORS.error} />
-          <Text style={[styles.statusText, { color: COLORS.error, marginLeft: 8 }]}>Generation Failed: Sensitive words.</Text>
+        <View style={styles.trackRow}>
+          <View style={[styles.trackImg, { backgroundColor: 'rgba(255,59,48,0.1)', alignItems: 'center', justifyContent: 'center' }]}>
+            <Ionicons name="warning" size={24} color={COLORS.error} />
+          </View>
+          <View style={{ flex: 1, marginLeft: 12, justifyContent: 'center' }}>
+            <Text style={styles.trackTitle}>{task.title}</Text>
+            <Text style={[styles.trackSubtitle, { color: COLORS.error }]}>Generation Failed: Sensitive words</Text>
+          </View>
+          <TouchableOpacity onPress={() => removeTask(task.taskId)} style={{ padding: 8 }}>
+            <Ionicons name="trash-outline" size={20} color={COLORS.textTertiary} />
+          </TouchableOpacity>
         </View>
       ) : task.status === 'FAILED' ? (
-        <View style={styles.errorBanner}>
-          <Ionicons name="warning" size={16} color={COLORS.error} />
-          <View style={{ flex: 1, marginLeft: 8 }}>
-            <Text style={[styles.statusText, { color: COLORS.error }]}>Generation Failed.</Text>
-            {(task as any).failReason ? (
-              <Text style={{ color: COLORS.error, fontSize: 11, opacity: 0.8, marginTop: 2 }}>{(task as any).failReason}</Text>
-            ) : null}
+        <View style={styles.trackRow}>
+          <View style={[styles.trackImg, { backgroundColor: 'rgba(255,59,48,0.1)', alignItems: 'center', justifyContent: 'center' }]}>
+            <Ionicons name="warning" size={24} color={COLORS.error} />
           </View>
+          <View style={{ flex: 1, marginLeft: 12, justifyContent: 'center' }}>
+            <Text style={styles.trackTitle}>{task.title}</Text>
+            <Text style={[styles.trackSubtitle, { color: COLORS.error }]} numberOfLines={1}>{(task as any).failReason || 'Generation Failed'}</Text>
+          </View>
+          <TouchableOpacity onPress={() => removeTask(task.taskId)} style={{ padding: 8 }}>
+            <Ionicons name="trash-outline" size={20} color={COLORS.textTertiary} />
+          </TouchableOpacity>
         </View>
       ) : Array.isArray(task.tracks) && task.tracks.length > 0 ? (
-        task.tracks.map(track => (
+        task.tracks.map((track, idx) => (
           <View key={track.id} style={styles.trackRow}>
             <TouchableOpacity onPress={() => handlePlay(track)}>
-              <Image source={{ uri: track.imageUrl }} style={styles.trackImg} cachePolicy="memory-disk" />
-              <View style={styles.playOverlay}>
-                <Ionicons name="play" size={24} color="#FFF" />
+              <View>
+                <Image source={{ uri: track.imageUrl }} style={styles.trackImg} cachePolicy="memory-disk" />
+                <View style={styles.durationPill}>
+                  <Text style={styles.durationText}>{formatDuration(track.duration || 0)}</Text>
+                </View>
+                {idx === 0 && <View style={styles.newDot} />}
               </View>
             </TouchableOpacity>
             
-            <View style={{ flex: 1, justifyContent: 'space-between', marginLeft: 12 }}>
-              <TouchableOpacity onPress={() => handlePlay(track)}>
+            <View style={{ flex: 1, marginLeft: 12, justifyContent: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', marginBottom: 2 }}>
                 <Text style={styles.trackTitle} numberOfLines={1}>{track.title || "AI Generated"}</Text>
-              </TouchableOpacity>
-              
-              <View style={styles.trackActions}>
-                <TouchableOpacity style={[styles.actionBtn, { backgroundColor: 'rgba(255,255,255,0.1)' }]} onPress={() => handlePublish(track)}>
-                  {isPublishing[track.id] ? <ActivityIndicator size="small" color={COLORS.gold} /> : (
-                    <>
-                      <Ionicons name="cloud-upload" size={14} color={COLORS.gold} />
-                      <Text style={[styles.actionText, { color: COLORS.gold }]}>Publish</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-
-                {!track.videoUrl ? (
-                  <TouchableOpacity style={styles.iconBtn} onPress={() => handleGenerateVideo(track)}>
-                    {isGeneratingVideo[track.id] ? <ActivityIndicator size="small" color={COLORS.textPrimary} /> : (
-                      <Ionicons name="videocam-outline" size={18} color={COLORS.textPrimary} />
-                    )}
-                  </TouchableOpacity>
+                {task.taskType === 'VOCAL_REMOVAL' ? (
+                  <View style={styles.badge}><Text style={styles.badgeText}>Vocals</Text></View>
                 ) : (
-                  <View style={[styles.iconBtn, { backgroundColor: 'rgba(255,255,255,0.05)' }]}>
-                    <Ionicons name="videocam" size={18} color={COLORS.gold} />
-                  </View>
+                  <View style={styles.badge}><Text style={styles.badgeText}>v5.5</Text></View>
                 )}
-
-                <TouchableOpacity style={styles.iconBtn} onPress={() => handleSeparateVocals(track)}>
-                  {isSeparating[track.id] ? <ActivityIndicator size="small" color={COLORS.textPrimary} /> : (
-                    <Ionicons name="cut-outline" size={18} color={COLORS.textPrimary} />
-                  )}
-                </TouchableOpacity>
-
-                <TouchableOpacity style={[styles.iconBtn, { backgroundColor: 'rgba(212, 175, 55, 0.15)' }]} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); openExtendModal(track.id, track.title || task.title); }}>
-                  <Ionicons name="add-circle-outline" size={18} color={COLORS.gold} />
-                </TouchableOpacity>
-
-                <TouchableOpacity style={[styles.iconBtn, { backgroundColor: 'rgba(212, 175, 55, 0.15)' }]} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); openPersonaModal(track.id); }}>
-                  <Ionicons name="person-add" size={18} color={COLORS.gold} />
-                </TouchableOpacity>
               </View>
+              <Text style={styles.trackSubtitle} numberOfLines={1}>{track.prompt || track.tags || 'AI Generated Music'}</Text>
             </View>
+
+            <TouchableOpacity style={{ padding: 12 }} onPress={() => openMenu(track)}>
+              <Ionicons name="ellipsis-horizontal" size={20} color={COLORS.textSecondary} />
+            </TouchableOpacity>
           </View>
         ))
-      ) : (
-        <Text style={styles.statusText}>Formatting tracks...</Text>
-      )}
+      ) : null}
+
+      <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={() => setMenuVisible(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setMenuVisible(false)}>
+          <TouchableOpacity activeOpacity={1} style={styles.modalContent}>
+            <View style={styles.modalHandle} />
+            {menuTrack && (
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+                <View style={styles.modalHeader}>
+                  <Image source={{ uri: menuTrack.imageUrl }} style={styles.modalImg} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.modalTitle} numberOfLines={1}>{menuTrack.title || 'AI Generated'}</Text>
+                    <Text style={styles.modalSubtitle} numberOfLines={1}>{menuTrack.prompt || menuTrack.tags || 'AI Generated Music'}</Text>
+                  </View>
+                </View>
+
+                <MenuAction icon="play" label="Play Track" onPress={() => { setMenuVisible(false); handlePlay(menuTrack); }} COLORS={COLORS} />
+                <MenuAction icon="cloud-upload" label="Publish to Profile" onPress={() => { setMenuVisible(false); handlePublish(menuTrack); }} loading={isPublishing[menuTrack.id]} COLORS={COLORS} />
+                <MenuAction icon="download" label="Download Audio" onPress={() => { handleDownload(menuTrack); }} loading={isDownloading[menuTrack.id]} COLORS={COLORS} />
+                
+                <MenuAction icon="cut" label="Separate Vocals" onPress={() => { setMenuVisible(false); handleSeparateVocals(menuTrack); }} loading={isSeparating[menuTrack.id]} COLORS={COLORS} />
+                <MenuAction icon="add-circle" label="Extend Track" onPress={() => { setMenuVisible(false); openExtendModal(menuTrack.id, menuTrack.title || task.title); }} COLORS={COLORS} />
+                <MenuAction icon="person-add" label="Voice Persona (Coming Soon)" onPress={() => { setMenuVisible(false); Alert.alert("Coming Soon", "Voice Personas are currently in development!"); }} COLORS={COLORS} />
+                
+                <View style={styles.menuDivider} />
+                <MenuAction icon="trash" label="Delete Task" color={COLORS.error} onPress={() => { setMenuVisible(false); removeTask(task.taskId); }} COLORS={COLORS} />
+              </ScrollView>
+            )}
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
 
+function MenuAction({ icon, label, onPress, loading, disabled, color, COLORS }: any) {
+  return (
+    <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 20 }} onPress={onPress} disabled={disabled || loading}>
+      <View style={{ width: 32, alignItems: 'center' }}>
+        {loading ? <ActivityIndicator size="small" color={color || COLORS.textPrimary} /> : <Ionicons name={icon} size={22} color={color || COLORS.textPrimary} />}
+      </View>
+      <Text style={{ fontSize: 16, fontWeight: '600', marginLeft: 12, color: color || COLORS.textPrimary }}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
 const getStyles = (COLORS: any) => StyleSheet.create({
-  container: { flex: 1 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  sectionTitle: { color: COLORS.textPrimary, fontSize: 22, fontWeight: '800' },
-  emptyState: { alignItems: 'center', justifyContent: 'center', marginTop: 60, padding: 20 },
+  container: { flex: 1, backgroundColor: COLORS.black },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, marginTop: 8 },
+  headerTitle: { color: COLORS.textPrimary, fontSize: 28, fontWeight: '900' },
+  headerIconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
+  
+  cardsScroll: { marginBottom: 24 },
+  topCard: { width: 140, height: 100, borderRadius: 12, padding: 12, justifyContent: 'space-between', marginRight: 12 },
+  topCardText: { color: '#FFF', fontSize: 16, fontWeight: '800' },
+  
+  localLibrarySection: { backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 16, paddingHorizontal: 16, marginBottom: 32 },
+  localLibraryRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
+  localLibraryText: { flex: 1, color: COLORS.textPrimary, fontSize: 17, fontWeight: '600' },
+
+  subHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  subHeaderTitle: { color: COLORS.textPrimary, fontSize: 20, fontWeight: '800' },
+  filterText: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '600' },
+
+  emptyState: { alignItems: 'center', justifyContent: 'center', marginTop: 40, padding: 20 },
   emptyText: { color: COLORS.textSecondary, fontSize: 18, fontWeight: '700', marginTop: 16 },
   emptySub: { color: COLORS.textTertiary, fontSize: 14, marginTop: 8 },
+
+  creditBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, gap: 6 },
+  creditText: { color: COLORS.gold, fontSize: 14, fontWeight: '700' },
   
-  taskCard: { backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
-  taskHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  taskTitle: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '800' },
-  trashBtn: { padding: 6, backgroundColor: 'rgba(255, 59, 48, 0.1)', borderRadius: 8 },
+  taskCard: { marginBottom: 0 },
+  trackRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  trackImg: { width: 56, height: 56, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.05)' },
+  durationPill: { position: 'absolute', bottom: 4, left: 4, backgroundColor: 'rgba(0,0,0,0.7)', paddingHorizontal: 4, paddingVertical: 2, borderRadius: 4 },
+  durationText: { color: '#FFF', fontSize: 10, fontWeight: '700' },
+  newDot: { position: 'absolute', top: 25, left: -8, width: 6, height: 6, borderRadius: 3, backgroundColor: '#FF2D55' },
   
-  statusRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(212, 175, 55, 0.1)', padding: 12, borderRadius: 12 },
-  statusText: { color: COLORS.gold, fontSize: 13, fontWeight: '600' },
-  checkBtn: { paddingHorizontal: 12, paddingVertical: 6, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 8 },
-  errorBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255, 59, 48, 0.1)', padding: 12, borderRadius: 12 },
-  
-  trackRow: { flexDirection: 'row', marginTop: 8, padding: 10, backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
-  trackImg: { width: 70, height: 70, borderRadius: 10 },
-  playOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  trackTitle: { color: COLORS.textPrimary, fontSize: 15, fontWeight: '700', marginBottom: 4 },
-  trackActions: { flexDirection: 'row', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginTop: 4 },
-  actionBtn: { paddingHorizontal: 10, height: 30, borderRadius: 15, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 4 },
-  iconBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
-  actionText: { fontSize: 12, fontWeight: '700' },
+  trackTitle: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '700', marginRight: 8 },
+  badge: { backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 12, marginRight: 4 },
+  badgeText: { color: COLORS.textSecondary, fontSize: 10, fontWeight: '600' },
+  trackSubtitle: { color: COLORS.textTertiary, fontSize: 14, marginTop: 4 },
+
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: '#1E1E1E', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '80%' },
+  modalHandle: { width: 40, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginTop: 12, marginBottom: 20 },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)', marginBottom: 8 },
+  modalImg: { width: 48, height: 48, borderRadius: 8, marginRight: 12 },
+  modalTitle: { color: COLORS.textPrimary, fontSize: 18, fontWeight: '800' },
+  modalSubtitle: { color: COLORS.textTertiary, fontSize: 14, marginTop: 2 },
+  menuDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.05)', marginVertical: 8 },
 });

@@ -98,9 +98,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       .single();
     if (data) {
       set({ profile: data as Profile });
-      if (data.partner_id && useThemeStore.getState().theme !== 'love') {
-        useThemeStore.getState().setTheme('love');
-      }
+      // Theme is no longer forced — user can pick any theme freely,
+      // even when paired. The love theme is only auto-applied on first pairing.
     }
   },
 }));

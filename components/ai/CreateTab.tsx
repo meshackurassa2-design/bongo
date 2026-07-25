@@ -91,7 +91,8 @@ export default function CreateTab({ onGenerateSuccess, openLyricsModal }: Create
         }
       }
       
-      const taskId = await generateMusic(finalLyrics, finalStyle, finalTitle, null, vocalGender, weirdness, styleInfluence, selectedPersona || undefined);
+      const isVoicePersona = personas.find(p => p.id === selectedPersona)?.description === "Custom Voice Clone";
+      const taskId = await generateMusic(finalLyrics, finalStyle, finalTitle, null, vocalGender, weirdness, styleInfluence, selectedPersona || undefined, isVoicePersona);
       
       addTask(taskId, finalTitle);
       

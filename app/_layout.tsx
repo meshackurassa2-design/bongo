@@ -19,6 +19,7 @@ import { ThemeProvider, DarkTheme } from '@react-navigation/native';
 import { StyleSheet } from 'react-native';
 import AnimatedSplash from '../components/AnimatedSplash';
 import ThemeEffects from '../components/ThemeEffects';
+import { useFonts, Outfit_400Regular, Outfit_600SemiBold, Outfit_700Bold, Outfit_800ExtraBold, Outfit_900Black } from '@expo-google-fonts/outfit';
 import '../i18n';
 
 // Ignore harmless background Supabase auth network errors in dev mode
@@ -38,6 +39,14 @@ export default function RootLayout() {
   const { init, session, isLoading } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
+
+  const [fontsLoaded] = useFonts({
+    Outfit_400Regular,
+    Outfit_600SemiBold,
+    Outfit_700Bold,
+    Outfit_800ExtraBold,
+    Outfit_900Black,
+  });
 
   useEffect(() => {
     // Initialize Auth Store

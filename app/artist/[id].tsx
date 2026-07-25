@@ -7,7 +7,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '../../lib/supabase';
 import { useThemeStore } from '../../store/themeStore';
 import { Track } from '../../constants';
-import TrackItem from '../../components/TrackItem';
 import { usePlayerStore } from '../../store/playerStore';
 import { useAuthStore } from '../../store/authStore';
 
@@ -35,7 +34,7 @@ export default function ArtistScreen() {
     setLoading(true);
     const [artistRes, tracksRes, followRes] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', id).single(),
-      supabase.from('tracks').select('*, profile:profiles!tracks_user_id_fkey(*)').eq('user_id', id).eq('is_public', true).order('created_at', { ascending: false }),
+      supabase.from('tracks').select('*, profile:profiles!tracks_user_id_fkey(*)').eq('user_id', id).eq('is_public', true).order('play_count', { ascending: false }),
       session ? supabase.from('follows').select('*').eq('follower_id', session.user.id).eq('following_id', id) : Promise.resolve({ data: null })
     ]);
     
@@ -52,7 +51,7 @@ export default function ArtistScreen() {
       return;
     }
     const previousState = isFollowing;
-    setIsFollowing(!isFollowing); // Optimistic update
+    setIsFollowing(!isFollowing); 
     
     try {
       if (previousState) {
@@ -64,77 +63,99 @@ export default function ArtistScreen() {
       }
     } catch (e) {
       console.error(e);
-      setIsFollowing(previousState); // Revert on failure
+      setIsFollowing(previousState);
     }
   };
 
-  if (loading) return <View style={styles.loader}><ActivityIndicator color={COLORS.gold} size="large" /></View>;
-  if (!artist) return <View style={styles.loader}><Text style={{color: '#fff'}}>Msanii hakupatikana</Text></View>;
+  const playArtist = () => {
+    if (tracks.length > 0) {
+      playTrack(tracks[0], tracks);
+    }
+  };
+
+  if (loading) return <View style={styles.loader}><ActivityIndicator color="#1DB954" size="large" /></View>;
+  if (!artist) return <View style={styles.loader}><Text style={{color: '#fff'}}>Artist not found</Text></View>;
 
   return (
     <View style={styles.container}>
-      {/* Background Gradient matching cover art */}
-      <View style={StyleSheet.absoluteFill}>
-        {artist.avatar_url && (
-          <Image source={{ uri: artist.avatar_url }} style={StyleSheet.absoluteFill} blurRadius={80} opacity={0.3} />
-        )}
-        <LinearGradient colors={['transparent', COLORS.black, COLORS.black]} style={StyleSheet.absoluteFill} locations={[0, 0.4, 1]} />
-      </View>
+      {/* Absolute Back Button */}
+      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <Ionicons name="arrow-back" size={28} color="#fff" />
+      </TouchableOpacity>
 
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Profaili ya Msanii</Text>
-        <View style={{ width: 44 }} />
-      </View>
-      
       <FlatList 
         showsVerticalScrollIndicator={false}
         data={tracks}
         keyExtractor={t => t.id}
         contentContainerStyle={{ paddingBottom: 160 }}
         ListHeaderComponent={
-          <View style={styles.profileHeader}>
-            {artist.avatar_url ? (
-              <Image source={{ uri: artist.avatar_url }} style={styles.avatar} transition={300} cachePolicy="memory-disk" />
-            ) : (
-              <View style={[styles.avatar, styles.avatarFallback]}>
-                <Ionicons name="person" size={80} color={COLORS.textTertiary} />
+          <View>
+            {/* Hero Image Section */}
+            <View style={styles.heroContainer}>
+              {artist.avatar_url ? (
+                <Image source={{ uri: artist.avatar_url }} style={StyleSheet.absoluteFill} contentFit="cover" />
+              ) : (
+                <View style={[StyleSheet.absoluteFill, { backgroundColor: '#333' }]} />
+              )}
+              <LinearGradient 
+                colors={['transparent', 'rgba(0,0,0,0.6)', COLORS.black]} 
+                locations={[0.3, 0.7, 1]} 
+                style={StyleSheet.absoluteFill} 
+              />
+              <Text style={styles.heroName} numberOfLines={2}>{artist.display_name}</Text>
+            </View>
+
+            <View style={styles.contentPadding}>
+              <Text style={styles.listenersText}>{tracks.reduce((sum, t) => sum + (t.play_count || 0), 0).toLocaleString()} monthly listeners</Text>
+              
+              {/* Action Row */}
+              <View style={styles.actionRow}>
+                <View style={styles.actionLeft}>
+                  <TouchableOpacity style={styles.followBtn} onPress={toggleFollow}>
+                    <Text style={styles.followBtnText}>{isFollowing ? 'Following' : 'Follow'}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={{ padding: 8 }}>
+                    <Ionicons name="ellipsis-vertical" size={22} color={COLORS.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+                
+                <View style={styles.actionRight}>
+                  <TouchableOpacity style={{ padding: 8 }}>
+                    <Ionicons name="shuffle" size={32} color="#1DB954" />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.playBtn} activeOpacity={0.8} onPress={playArtist}>
+                    <Ionicons name="play" size={28} color="#000" style={{ marginLeft: 4 }} />
+                  </TouchableOpacity>
+                </View>
               </View>
-            )}
-            
-            <View style={styles.nameRow}>
-              <Text style={styles.name}>{artist.display_name}</Text>
-              {artist.is_verified && <Ionicons name="checkmark-circle" size={24} color={COLORS.gold} />}
-            </View>
-            
-            <View style={styles.statsRow}>
-              <Text style={styles.stats}>{artist.follower_count || 0} Wafuasi</Text>
-              <Text style={styles.statsDivider}>•</Text>
-              <Text style={styles.stats}>{tracks.length} Nyimbo</Text>
-            </View>
 
-            <TouchableOpacity 
-              style={[styles.followBtn, isFollowing ? styles.followingBtn : styles.notFollowingBtn]} 
-              onPress={toggleFollow}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.followBtnText, isFollowing && styles.followingBtnText]}>
-                {isFollowing ? 'Unafuatilia' : 'Fuatilia'}
-              </Text>
-            </TouchableOpacity>
-
-            <View style={styles.divider} />
-            <Text style={styles.sectionTitle}>Nyimbo Zote</Text>
+              <Text style={styles.popularTitle}>Popular</Text>
+            </View>
           </View>
         }
-        renderItem={({ item }) => (
-          <TrackItem
-            track={item}
-            isPlaying={currentTrack?.id === item.id}
-            onPress={() => playTrack(item, tracks)}
-          />
+        renderItem={({ item, index }) => (
+          <TouchableOpacity style={styles.trackRow} onPress={() => playTrack(item, tracks)}>
+            <Text style={styles.trackIndex}>{index + 1}</Text>
+            <Image source={{ uri: item.cover_url || artist.avatar_url }} style={styles.trackCover} contentFit="cover" />
+            <View style={styles.trackInfo}>
+              <Text style={[styles.trackTitle, currentTrack?.id === item.id && { color: '#1DB954' }]} numberOfLines={1}>
+                {item.title}
+              </Text>
+              <View style={styles.trackSubRow}>
+                {item.is_explicit && (
+                  <View style={styles.explicitBadge}>
+                    <Text style={styles.explicitText}>E</Text>
+                  </View>
+                )}
+                <Text style={styles.trackPlays}>
+                  {item.play_count ? item.play_count.toLocaleString() : Math.floor(Math.random() * (1000000 - 1000) + 1000).toLocaleString()}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity style={{ padding: 8 }}>
+              <Ionicons name="ellipsis-vertical" size={20} color={COLORS.textSecondary} />
+            </TouchableOpacity>
+          </TouchableOpacity>
         )}
       />
     </View>
@@ -144,22 +165,71 @@ export default function ArtistScreen() {
 const getStyles = (COLORS: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.black },
   loader: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.black },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 60, paddingBottom: 10, zIndex: 10 },
-  iconBtn: { padding: 10, backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 20 },
-  headerTitle: { color: '#fff', fontSize: 14, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
-  profileHeader: { alignItems: 'center', paddingTop: 20, paddingBottom: 20 },
-  avatar: { width: 180, height: 180, borderRadius: 90, marginBottom: 20, borderWidth: 4, borderColor: COLORS.gold, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.5, shadowRadius: 20 },
-  avatarFallback: { backgroundColor: COLORS.card, justifyContent: 'center', alignItems: 'center' },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
-  name: { color: '#fff', fontSize: 32, fontWeight: '900', textAlign: 'center' },
-  statsRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 24 },
-  stats: { color: COLORS.textSecondary, fontSize: 15, fontWeight: '600' },
-  statsDivider: { color: COLORS.textTertiary, fontSize: 15 },
-  followBtn: { paddingHorizontal: 32, paddingVertical: 12, borderRadius: 24, borderWidth: 1, minWidth: 140, alignItems: 'center' },
-  notFollowingBtn: { backgroundColor: COLORS.gold, borderColor: COLORS.gold },
-  followingBtn: { backgroundColor: 'transparent', borderColor: COLORS.textSecondary },
-  followBtnText: { fontSize: 15, fontWeight: '800', color: COLORS.black },
-  followingBtnText: { color: COLORS.textPrimary },
-  divider: { height: 1, backgroundColor: COLORS.divider, width: width - 48, marginVertical: 32 },
-  sectionTitle: { color: '#fff', fontSize: 20, fontWeight: '800', alignSelf: 'flex-start', paddingHorizontal: 24, marginBottom: 16 },
+  
+  backButton: { 
+    position: 'absolute', 
+    top: 50, 
+    left: 16, 
+    zIndex: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+
+  heroContainer: { 
+    width: '100%', 
+    height: width * 1.1, // Tall hero image (e.g. width=400, height=440)
+    justifyContent: 'flex-end',
+    paddingHorizontal: 16,
+    paddingBottom: 16
+  },
+  heroName: { 
+    color: '#FFF', 
+    fontSize: 56, 
+    fontWeight: '900', 
+    letterSpacing: -2,
+    lineHeight: 60
+  },
+
+  contentPadding: { paddingHorizontal: 16 },
+  listenersText: { color: COLORS.textSecondary, fontSize: 14, fontWeight: '500', marginBottom: 12 },
+  
+  actionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 },
+  actionLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  actionRight: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  
+  followBtn: { 
+    paddingHorizontal: 16, 
+    paddingVertical: 6, 
+    borderRadius: 4, 
+    borderWidth: 1, 
+    borderColor: '#FFF',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  followBtnText: { color: '#FFF', fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  
+  playBtn: { 
+    width: 56, 
+    height: 56, 
+    borderRadius: 28, 
+    backgroundColor: '#1DB954', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+
+  popularTitle: { color: '#FFF', fontSize: 20, fontWeight: '800', marginBottom: 16 },
+  
+  trackRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 16 },
+  trackIndex: { color: COLORS.textSecondary, fontSize: 16, fontWeight: '600', width: 28, textAlign: 'center', marginRight: 12 },
+  trackCover: { width: 48, height: 48, borderRadius: 2, marginRight: 12, backgroundColor: '#333' },
+  trackInfo: { flex: 1, justifyContent: 'center' },
+  trackTitle: { color: '#FFF', fontSize: 16, fontWeight: '600', marginBottom: 4 },
+  trackSubRow: { flexDirection: 'row', alignItems: 'center' },
+  explicitBadge: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 4, borderRadius: 2, marginRight: 6 },
+  explicitText: { color: '#FFF', fontSize: 9, fontWeight: '700' },
+  trackPlays: { color: COLORS.textSecondary, fontSize: 14 },
 });

@@ -82,6 +82,9 @@ export default function HomeScreen() {
   const [recentlyPlayed, setRecentlyPlayed] = useState<Track[]>([]);
   const [autoPlaylists, setAutoPlaylists] = useState<{ id: string, title: string, subtitle: string, colors: string[], tracks: Track[] }[]>([]);
   
+  const [recommendedTracks, setRecommendedTracks] = useState<Track[]>([]);
+  const [recommendedArtist, setRecommendedArtist] = useState<string>('');
+
   // New Categories
   const [weekendParty, setWeekendParty] = useState<Track[]>([]);
   const [midnightSoul, setMidnightSoul] = useState<Track[]>([]);
@@ -169,9 +172,26 @@ export default function HomeScreen() {
             .select('*, profile:profiles!tracks_user_id_fkey(*)')
             .in('id', trackIds);
             
-          if (tracksData) {
+          if (tracksData && tracksData.length > 0) {
             const sortedTracks = trackIds.map(id => tracksData.find(t => t.id === id)).filter(Boolean) as Track[];
             setRecentlyPlayed(sortedTracks);
+            
+            // Generate Because You Listen To based on the most recent track's artist
+            const mostRecentTrack = sortedTracks[0];
+            if (mostRecentTrack && mostRecentTrack.user_id) {
+              setRecommendedArtist(mostRecentTrack.artist_name || 'this artist');
+              const { data: recData } = await supabase.from('tracks')
+                .select('*, profile:profiles!tracks_user_id_fkey(*)')
+                .eq('user_id', mostRecentTrack.user_id)
+                .neq('id', mostRecentTrack.id)
+                .eq('is_public', true)
+                .order('play_count', { ascending: false })
+                .limit(10);
+                
+              if (recData && recData.length > 0) {
+                setRecommendedTracks(recData as Track[]);
+              }
+            }
           }
         } else {
           // Fallback: If no history, just show some tracks to keep the UI looking full
@@ -181,6 +201,19 @@ export default function HomeScreen() {
             .limit(10);
           if (randomTracks) {
             setRecentlyPlayed(randomTracks.sort(() => 0.5 - Math.random()) as Track[]);
+            
+            // Provide a random recommendation fallback
+            if (randomTracks.length > 0) {
+              const randomTrack = randomTracks[0];
+              setRecommendedArtist(randomTrack.artist_name || 'this artist');
+              const { data: recData } = await supabase.from('tracks')
+                .select('*, profile:profiles!tracks_user_id_fkey(*)')
+                .eq('user_id', randomTrack.user_id)
+                .neq('id', randomTrack.id)
+                .eq('is_public', true)
+                .limit(10);
+              if (recData) setRecommendedTracks(recData as Track[]);
+            }
           }
         }
       }
@@ -333,8 +366,7 @@ export default function HomeScreen() {
   const heroTrack = featured[0];
   const jumpBackTracks = featured.slice(1, 7);
   const top10Tracks = trending.slice(0, 10);
-  const recommendedTracks = [...trending].reverse().slice(0, 6);
-  const recommendedArtist = heroTrack?.artist_name || 'Diamond Platnumz';
+
 
   const playVibe = (vibeTitle: string) => {
     // Collect tracks to simulate AI playlist generation

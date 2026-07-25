@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -17,20 +17,28 @@ import SoundsTab from '../../components/ai/SoundsTab';
 import AILyricsModal from '../../components/ai/AILyricsModal';
 import ExtractPersonaModal from '../../components/ai/ExtractPersonaModal';
 
-type TabType = 'Create' | 'Cover' | 'Sounds' | 'Workspace' | 'Personas';
-const TABS: TabType[] = ['Create', 'Cover', 'Sounds', 'Workspace', 'Personas'];
+type TabType = 'Create' | 'Cover' | 'Sounds' | 'Personas';
+const TABS: TabType[] = ['Create', 'Cover', 'Sounds', 'Personas'];
 
 export default function AIStudioScreen() {
   const { COLORS } = useThemeStore();
   const styles = getStyles(COLORS);
   const router = useRouter();
+  const { tool } = useLocalSearchParams<{ tool: TabType }>();
   const { profile } = useAuthStore();
   
   const [activeTab, setActiveTab] = useState<TabType>('Create');
   
+  useEffect(() => {
+    if (tool && TABS.includes(tool)) {
+      setActiveTab(tool);
+    }
+  }, [tool]);
+  
   // Modals state
   const [showLyricsModal, setShowLyricsModal] = useState(false);
   const [extractAudioId, setExtractAudioId] = useState<string | null>(null);
+  const [extractTaskId, setExtractTaskId] = useState<string | null>(null);
   
   // For passing back generated lyrics to CreateTab
   const [lyricsCallback, setLyricsCallback] = useState<((lyrics: string) => void) | null>(null);
@@ -55,64 +63,61 @@ export default function AIStudioScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={28} color={COLORS.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>AI Studio</Text>
-        <TouchableOpacity 
-          style={[styles.creditBadge, (profile?.credits || 0) <= 2 && { backgroundColor: 'rgba(255, 59, 48, 0.1)', borderColor: COLORS.error, borderWidth: 1 }]} 
-          onPress={() => router.push('/buy-credits')}
-        >
-          <Ionicons name="diamond" size={14} color={(profile?.credits || 0) <= 2 ? COLORS.error : COLORS.gold} />
-          <Text style={[styles.creditText, (profile?.credits || 0) <= 2 && { color: COLORS.error }]}>
-            {profile?.credits || 0}
-          </Text>
-        </TouchableOpacity>
-      </View>
+        <Text style={styles.headerTitle}>
+          {activeTab === 'Create' ? 'Create Music' : activeTab === 'Personas' ? 'Voice Personas' : activeTab === 'Cover' ? 'Upload Cover' : activeTab === 'Sounds' ? 'Sound Effects' : 'AI Studio'}
+        </Text>
+          <TouchableOpacity 
+            style={[styles.creditBadge, (profile?.credits || 0) <= 2 && { backgroundColor: 'rgba(255, 59, 48, 0.1)', borderColor: COLORS.error, borderWidth: 1 }]} 
+            onPress={() => router.push('/buy-credits')}
+          >
+            <Ionicons name="diamond" size={14} color={(profile?.credits || 0) <= 2 ? COLORS.error : COLORS.gold} />
+            <Text style={[styles.creditText, (profile?.credits || 0) <= 2 && { color: COLORS.error }]}>
+              {profile?.credits || 0}
+            </Text>
+          </TouchableOpacity>
+        </View>
       
-      {/* Premium Tab Bar */}
+      {/* Premium Tab Bar for Lateral Navigation */}
       <View style={styles.tabContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabScroll}>
-          {TABS.map(tab => {
-            const isActive = activeTab === tab;
-            return (
-              <TouchableOpacity 
-                key={tab} 
-                style={[styles.tab, isActive && styles.activeTab]} 
-                onPress={() => setActiveTab(tab)}
-                activeOpacity={0.7}
-              >
-                {isActive && (
-                  <LinearGradient 
-                    colors={['rgba(212, 175, 55, 0.2)', 'rgba(212, 175, 55, 0.05)']} 
-                    style={[StyleSheet.absoluteFill, { borderRadius: 20 }]}
-                  />
-                )}
-                <Text style={[styles.tabText, isActive && styles.activeTabText]}>{tab}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
+            {TABS.map(tab => {
+              const isActive = activeTab === tab;
+              return (
+                <TouchableOpacity 
+                  key={tab} 
+                  style={[styles.tab, isActive && styles.activeTab]} 
+                  onPress={() => setActiveTab(tab)}
+                  activeOpacity={0.7}
+                >
+                  {isActive && (
+                    <LinearGradient 
+                      colors={['rgba(212, 175, 55, 0.2)', 'rgba(212, 175, 55, 0.05)']} 
+                      style={[StyleSheet.absoluteFill, { borderRadius: 20 }]}
+                    />
+                  )}
+                  <Text style={[styles.tabText, isActive && styles.activeTabText]}>{tab}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
 
       <View style={styles.content}>
         {activeTab === 'Create' && (
           <CreateTab 
-            onGenerateSuccess={() => setActiveTab('Workspace')} 
+            onGenerateSuccess={() => router.back()} 
             openLyricsModal={openLyricsModal} 
           />
         )}
         {activeTab === 'Cover' && (
           <UploadCoverTab 
-            onGenerateSuccess={() => setActiveTab('Workspace')} 
+            onGenerateSuccess={() => router.back()} 
             openLyricsModal={openLyricsModal}
           />
         )}
         {activeTab === 'Sounds' && (
           <SoundsTab 
-            onGenerateSuccess={() => setActiveTab('Workspace')} 
-          />
-        )}
-        {activeTab === 'Workspace' && (
-          <WorkspaceTab 
-            openPersonaModal={(id) => setExtractAudioId(id)} 
+            onGenerateSuccess={() => router.back()} 
           />
         )}
         {activeTab === 'Personas' && (
@@ -128,7 +133,8 @@ export default function AIStudioScreen() {
 
       <ExtractPersonaModal 
         audioId={extractAudioId} 
-        onClose={() => setExtractAudioId(null)} 
+        taskId={extractTaskId}
+        onClose={() => { setExtractAudioId(null); setExtractTaskId(null); }} 
       />
     </SafeAreaView>
   );
@@ -142,7 +148,7 @@ const getStyles = (COLORS: any) => StyleSheet.create({
   creditBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, gap: 6 },
   creditText: { color: COLORS.gold, fontSize: 14, fontWeight: '700' },
   
-  tabContainer: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)', paddingBottom: 8 },
+  tabContainer: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)', paddingBottom: 8, paddingTop: 4 },
   tabScroll: { paddingHorizontal: 16, gap: 6 },
   tab: { paddingHorizontal: 12, paddingVertical: 10, borderRadius: 20, borderWidth: 1, borderColor: 'transparent' },
   activeTab: { borderColor: 'rgba(212, 175, 55, 0.3)' },

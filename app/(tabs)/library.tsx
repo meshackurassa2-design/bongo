@@ -2,13 +2,17 @@ import React, { useCallback, useState, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView, Alert, Modal, TextInput, Switch, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
 import { Track } from '../../constants';
 import { usePlayerStore } from '../../store/playerStore';
 import { useOfflineStore } from '../../store/offlineStore';
+import { useAIStore } from '../../store/aiStore';
 import TrackItem from '../../components/TrackItem';
+import { TaskItem } from '../../components/ai/WorkspaceTab';
+import * as MediaLibrary from 'expo-media-library';
 
 export default function LibraryScreen() {
   const { COLORS } = useThemeStore();
@@ -20,14 +24,52 @@ export default function LibraryScreen() {
 
   const [likedTracks, setLikedTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(false);
-  const [tab, setTab] = useState<'liked' | 'playlists' | 'uploads' | 'downloads'>('liked');
+  const [tab, setTab] = useState<'ai_songs' | 'liked' | 'playlists' | 'uploads' | 'downloads'>('ai_songs');
   const [uploads, setUploads] = useState<Track[]>([]);
   const [playlists, setPlaylists] = useState<any[]>([]);
+  
+  const { tasks } = useAIStore();
+  const [isPublishing, setIsPublishing] = useState<Record<string, boolean>>({});
+  const [isDownloading, setIsDownloading] = useState<Record<string, boolean>>({});
+  const [isGeneratingVideo, setIsGeneratingVideo] = useState<Record<string, boolean>>({});
+  const [isSeparating, setIsSeparating] = useState<Record<string, boolean>>({});
   
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [newPlaylistTitle, setNewPlaylistTitle] = useState('');
   const [newPlaylistIsPublic, setNewPlaylistIsPublic] = useState(true);
   const { downloadedTracks } = useOfflineStore();
+  const [localTracks, setLocalTracks] = useState<Track[]>([]);
+  const [hasMediaPermission, setHasMediaPermission] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (tab === 'downloads') {
+      (async () => {
+        const { status, canAskAgain } = await MediaLibrary.getPermissionsAsync();
+        setHasMediaPermission(status === 'granted');
+        if (status === 'granted') {
+          loadLocalAudio();
+        }
+      })();
+    }
+  }, [tab]);
+
+  const requestMediaPermission = async () => {
+    const { status } = await MediaLibrary.requestPermissionsAsync();
+    setHasMediaPermission(status === 'granted');
+    if (status === 'granted') loadLocalAudio();
+  };
+
+  const loadLocalAudio = async () => {
+    try {
+      const media = await MediaLibrary.getAssetsAsync({ mediaType: MediaLibrary.MediaType.audio, first: 100, sortBy: [MediaLibrary.SortBy.creationTime] });
+      const mapped: Track[] = media.assets.map(a => ({
+        id: `local_${a.id}`, user_id: 'local_device', title: a.filename.replace(/\.[^/.]+$/, ""), artist_name: 'Local Music', genre: 'Local', cover_url: null, audio_url: a.uri, description: null, is_public: false, created_at: new Date(a.creationTime || Date.now()).toISOString(),
+      }));
+      setLocalTracks(mapped);
+    } catch (e) {
+      console.log('Error loading local music:', e);
+    }
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -127,54 +169,98 @@ export default function LibraryScreen() {
   }, [session]);
 
   const isArtist = session?.user?.user_metadata?.role === 'artist';
-  const tracks = tab === 'liked' ? likedTracks : tab === 'uploads' ? uploads : Object.values(downloadedTracks);
+  const tracks = tab === 'liked' ? likedTracks : tab === 'uploads' ? uploads : [...Object.values(downloadedTracks), ...localTracks];
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Maktaba</Text>
+      <Text style={styles.title}>Workspace</Text>
 
-      {/* Device Music Button */}
-      <TouchableOpacity 
-        style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, padding: 16, borderRadius: 12, marginBottom: 16, borderWidth: 1, borderColor: COLORS.divider }}
-        onPress={() => router.push('/local-music')}
-      >
-        <Ionicons name="phone-portrait-outline" size={24} color={COLORS.gold} />
-        <View style={{ flex: 1, marginLeft: 16 }}>
-          <Text style={{ color: COLORS.textPrimary, fontSize: 16, fontWeight: '700' }}>Device Music</Text>
-          <Text style={{ color: COLORS.textSecondary, fontSize: 12, marginTop: 2 }}>Play MP3s saved on your phone</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color={COLORS.textTertiary} />
-      </TouchableOpacity>
-
-      {/* Tabs */}
       <View style={{ marginBottom: 12 }}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>
-          {session && (
-            <>
-              <TouchableOpacity style={[styles.tab, tab === 'liked' && styles.tabActive]} onPress={() => setTab('liked')}>
-                <Ionicons name="heart" size={16} color={tab === 'liked' ? COLORS.gold : COLORS.textTertiary} />
-                <Text style={[styles.tabText, tab === 'liked' && styles.tabTextActive]}>Nilizopenda</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.tab, tab === 'playlists' && styles.tabActive]} onPress={() => setTab('playlists')}>
-                <Ionicons name="list" size={16} color={tab === 'playlists' ? COLORS.gold : COLORS.textTertiary} />
-                <Text style={[styles.tabText, tab === 'playlists' && styles.tabTextActive]}>Playlists</Text>
-              </TouchableOpacity>
-            </>
-          )}
-          {session && isArtist && (
-            <TouchableOpacity style={[styles.tab, tab === 'uploads' && styles.tabActive]} onPress={() => setTab('uploads')}>
-              <Ionicons name="cloud-upload" size={16} color={tab === 'uploads' ? COLORS.gold : COLORS.textTertiary} />
-              <Text style={[styles.tabText, tab === 'uploads' && styles.tabTextActive]}>Nilichopakia</Text>
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity style={[styles.tab, tab === 'downloads' && styles.tabActive]} onPress={() => setTab('downloads')}>
-            <Ionicons name="download" size={16} color={tab === 'downloads' ? COLORS.gold : COLORS.textTertiary} />
-            <Text style={[styles.tabText, tab === 'downloads' && styles.tabTextActive]}>Zilizopakuliwa</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.cardsScroll} contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}>
+          <TouchableOpacity onPress={() => setTab('downloads')} activeOpacity={0.8}>
+            <LinearGradient colors={['#004d40', '#00251a']} style={styles.topCard}>
+              <Ionicons name="cloud-download" size={28} color="#FFF" style={{ marginBottom: 8 }} />
+              <Text style={styles.topCardText}>Offline Songs</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setTab('ai_songs')} activeOpacity={0.8}>
+            <LinearGradient colors={['#6B21A8', '#3B0764']} style={styles.topCard}>
+              <Ionicons name="sparkles" size={28} color="#FFF" style={{ marginBottom: 8 }} />
+              <Text style={styles.topCardText}>My AI Songs</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/ai-studio?tool=Create')} activeOpacity={0.8}>
+            <LinearGradient colors={['#D946EF', '#8B5CF6']} style={styles.topCard}>
+              <Ionicons name="musical-notes" size={28} color="#FFF" style={{ marginBottom: 8 }} />
+              <Text style={styles.topCardText}>Create Music</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/ai-studio?tool=Personas')} activeOpacity={0.8}>
+            <LinearGradient colors={['#F59E0B', '#EA580C']} style={styles.topCard}>
+              <Ionicons name="people" size={28} color="#FFF" style={{ marginBottom: 8 }} />
+              <Text style={styles.topCardText}>Voice Personas</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/ai-studio?tool=Cover')} activeOpacity={0.8}>
+            <LinearGradient colors={['#10B981', '#059669']} style={styles.topCard}>
+              <Ionicons name="mic" size={28} color="#FFF" style={{ marginBottom: 8 }} />
+              <Text style={styles.topCardText}>Cover Songs</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/ai-studio?tool=Sound')} activeOpacity={0.8}>
+            <LinearGradient colors={['#3B82F6', '#1D4ED8']} style={styles.topCard}>
+              <Ionicons name="volume-medium" size={28} color="#FFF" style={{ marginBottom: 8 }} />
+              <Text style={styles.topCardText}>Sound Effects</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setTab('playlists')} activeOpacity={0.8}>
+            <LinearGradient colors={['#A81A8A', '#571096']} style={styles.topCard}>
+              <Ionicons name="albums" size={28} color="#FFF" style={{ marginBottom: 8 }} />
+              <Text style={styles.topCardText}>Playlists</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setTab('uploads')} activeOpacity={0.8}>
+            <LinearGradient colors={['#E59400', '#D34D00']} style={styles.topCard}>
+              <Ionicons name="cloud-upload" size={28} color="#FFF" style={{ marginBottom: 8 }} />
+              <Text style={styles.topCardText}>Uploads</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setTab('liked')} activeOpacity={0.8}>
+            <LinearGradient colors={['#C41427', '#800B17']} style={styles.topCard}>
+              <Ionicons name="heart" size={28} color="#FFF" style={{ marginBottom: 8 }} />
+              <Text style={styles.topCardText}>Liked Songs</Text>
+            </LinearGradient>
           </TouchableOpacity>
         </ScrollView>
       </View>
 
-      {loading ? (
+      {tab === 'ai_songs' ? (
+        <ScrollView style={{ flex: 1, paddingHorizontal: 16 }} contentContainerStyle={{ paddingBottom: 160 }}>
+          {tasks.length === 0 ? (
+            <View style={styles.empty}>
+              <Ionicons name="folder-open-outline" size={64} color="rgba(255,255,255,0.2)" />
+              <Text style={styles.emptyText}>Your workspace is empty.</Text>
+            </View>
+          ) : (
+            tasks.map(task => (
+              <TaskItem 
+                key={task.taskId} 
+                task={task} 
+                isPublishing={isPublishing} 
+                setIsPublishing={setIsPublishing} 
+                isDownloading={isDownloading} 
+                setIsDownloading={setIsDownloading} 
+                isGeneratingVideo={isGeneratingVideo} 
+                setIsGeneratingVideo={setIsGeneratingVideo} 
+                isSeparating={isSeparating} 
+                setIsSeparating={setIsSeparating} 
+                openPersonaModal={(id, taskId) => router.push(`/ai-studio?tool=Personas&audioId=${id}&taskId=${taskId}`)} 
+                openExtendModal={(id, title) => {}} 
+              />
+            ))
+          )}
+        </ScrollView>
+      ) : loading ? (
         <ActivityIndicator color={COLORS.gold} style={{ marginTop: 40 }} />
       ) : tab === 'playlists' ? (
         <View style={{ flex: 1 }}>
@@ -208,34 +294,52 @@ export default function LibraryScreen() {
             )}
           />
         </View>
-      ) : tracks.length === 0 ? (
-        <View style={styles.empty}>
-          <Ionicons name={tab === 'liked' ? 'heart-dislike' : tab === 'uploads' ? 'folder-open' : 'cloud-offline'} size={64} color={COLORS.textSecondary} />
-          <Text style={styles.emptyText}>
-            {tab === 'liked' ? 'Bado hujapenda wimbo wowote' : tab === 'uploads' ? 'Bado hujapakia wimbo wowote' : 'Hujapakua nyimbo zozote za kusikiliza nje ya mtandao'}
-          </Text>
-        </View>
       ) : (
-        <FlatList
-          data={tracks}
-          keyExtractor={t => t.id}
-          contentContainerStyle={{ paddingBottom: 160 }}
-          renderItem={({ item }) => (
-            <TrackItem
-              track={item}
-              isPlaying={currentTrack?.id === item.id}
-              onPress={() => {
-                playTrack(item, tracks);
-                router.push('/player');
-              }}
-              onArtistPress={() => router.push({ pathname: '/artist/[id]', params: { id: item.user_id } })}
-              onDelete={tab === 'uploads' ? () => handleDeleteTrack(item) : undefined}
+        <View style={{ flex: 1, paddingHorizontal: 16 }}>
+          {tab === 'downloads' && hasMediaPermission === false && (
+            <TouchableOpacity 
+              style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(217, 160, 91, 0.1)', padding: 16, borderRadius: 12, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(217, 160, 91, 0.3)', marginTop: 16 }}
+              onPress={requestMediaPermission}
+            >
+              <Ionicons name="phone-portrait-outline" size={24} color={COLORS.gold} />
+              <View style={{ flex: 1, marginLeft: 16 }}>
+                <Text style={{ color: COLORS.gold, fontSize: 15, fontWeight: '700' }}>Find Local Device Music</Text>
+                <Text style={{ color: COLORS.textSecondary, fontSize: 12, marginTop: 2 }}>Allow access to play MP3s from your phone</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={COLORS.gold} />
+            </TouchableOpacity>
+          )}
+
+          {tracks.length === 0 ? (
+            <View style={styles.empty}>
+              <Ionicons name={tab === 'liked' ? 'heart-dislike' : tab === 'uploads' ? 'folder-open' : 'cloud-offline'} size={64} color={COLORS.textSecondary} />
+              <Text style={styles.emptyText}>
+                {tab === 'liked' ? 'Bado hujapenda wimbo wowote' : tab === 'uploads' ? 'Bado hujapakia wimbo wowote' : 'Hujapakua nyimbo zozote za kusikiliza nje ya mtandao'}
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={tracks}
+              keyExtractor={t => t.id}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 160 }}
+              renderItem={({ item }) => (
+                <TrackItem
+                  track={item}
+                  isPlaying={currentTrack?.id === item.id}
+                  onPress={() => {
+                    playTrack(item, tracks);
+                    router.push('/player');
+                  }}
+                  onArtistPress={() => router.push({ pathname: '/artist/[id]', params: { id: item.user_id } })}
+                  onDelete={tab === 'uploads' ? () => handleDeleteTrack(item) : undefined}
+                />
+              )}
             />
           )}
-        />
+        </View>
       )}
       
-      {/* Create Playlist Modal */}
       <Modal visible={createModalVisible} transparent animationType="slide" onRequestClose={() => setCreateModalVisible(false)}>
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.modalContent}>
@@ -283,6 +387,11 @@ export default function LibraryScreen() {
 const getStyles = (COLORS: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.black, paddingTop: 60 },
   title: { color: COLORS.gold, fontSize: 26, fontWeight: '900', marginHorizontal: 16, marginBottom: 16 },
+  
+  cardsScroll: { marginBottom: 4 },
+  topCard: { width: 140, height: 100, borderRadius: 12, padding: 12, justifyContent: 'center', alignItems: 'center' },
+  topCardText: { color: '#FFF', fontSize: 16, fontWeight: '800', textAlign: 'center' },
+
   tabs: { paddingHorizontal: 16, gap: 10 },
   tab: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, gap: 8, backgroundColor: COLORS.card, borderRadius: 20, borderWidth: 1, borderColor: COLORS.divider },
   tabActive: { backgroundColor: COLORS.gold + '20', borderColor: COLORS.gold },

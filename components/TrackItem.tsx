@@ -1,11 +1,13 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeStore } from '../store/themeStore';
 import { Track } from '../constants';
 import { useOfflineStore } from '../store/offlineStore';
 import { useJamStore } from '../store/jamStore';
+import { useAuthStore } from '../store/authStore';
+import { supabase } from '../lib/supabase';
 
 type Props = {
   track: Track;
@@ -26,6 +28,38 @@ export default function TrackItem({ track, isPlaying, onPress, onArtistPress, on
 
   const role = useJamStore(s => s.role);
   const broadcastAddTrack = useJamStore(s => s.broadcastAddTrack);
+  const session = useAuthStore(s => s.session);
+
+  const handleReport = () => {
+    Alert.alert(
+      "Ripoti Hakimiliki",
+      "Je, wimbo huu unatumia kazi yako bila ruhusa?",
+      [
+        { text: "Hapana", style: "cancel" },
+        { 
+          text: "Ndiyo, Ripoti", 
+          style: "destructive",
+          onPress: async () => {
+            if (!session) {
+              Alert.alert("Kosa", "Ingia kwenye akaunti yako ili kutoa ripoti.");
+              return;
+            }
+            try {
+              const { error } = await supabase.from('copyright_reports').insert({
+                track_id: track.id,
+                reporter_id: session.user.id,
+                reason: 'Unauthorized use of copyrighted material reported from TrackItem'
+              });
+              if (error) throw error;
+              Alert.alert("Asante", "Ripoti yako imepokelewa.");
+            } catch (e: any) {
+              Alert.alert("Kosa", e.message);
+            }
+          }
+        }
+      ]
+    );
+  };
 
   return (
     <TouchableOpacity
@@ -76,6 +110,10 @@ export default function TrackItem({ track, isPlaying, onPress, onArtistPress, on
           <Ionicons name="heart" size={10} color={COLORS.textTertiary} />
           <Text style={styles.stat}>{formatCount(track.like_count)}</Text>
         </View>
+
+        <TouchableOpacity onPress={handleReport} style={[styles.deleteBtn, { backgroundColor: 'transparent', padding: 0 }]}>
+          <Ionicons name="warning" size={14} color="#ff5555" />
+        </TouchableOpacity>
         
         {onDelete && (
           <TouchableOpacity onPress={onDelete} style={styles.deleteBtn}>

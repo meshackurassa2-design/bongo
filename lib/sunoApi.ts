@@ -48,7 +48,8 @@ export const generateMusic = async (
   vocalGender?: 'Male' | 'Female' | 'Any',
   weirdness?: number,
   styleInfluence?: number,
-  personaId?: string
+  personaId?: string,
+  isVoicePersona?: boolean
 ): Promise<string> => {
   const { provider, apiKey, baseUrl } = await getApiConfig();
 
@@ -67,18 +68,21 @@ export const generateMusic = async (
 
   if (provider === 'kie') {
     payload.style = finalStyle;
-    payload.model = personaId ? 'V3_5' : 'V4_5ALL';
+    payload.model = personaId ? 'V5_5' : 'V4_5ALL';
     if (typeof weirdness === 'number') payload.weirdnessConstraint = weirdness;
     if (typeof styleInfluence === 'number') payload.styleWeight = styleInfluence;
   } else {
     payload.tags = finalStyle;
-    payload.model = personaId ? 'V3_5' : 'V4_5ALL';
+    payload.model = personaId ? (isVoicePersona ? 'V5_5' : 'V5') : 'V4_5ALL';
     if (typeof weirdness === 'number') payload.weirdness = weirdness;
     if (typeof styleInfluence === 'number') payload.style_influence = styleInfluence;
   }
 
   if (personaId) {
     payload.personaId = personaId;
+    if (isVoicePersona) {
+      payload.personaModel = 'voice_persona';
+    }
   }
   if (uploadUrl) payload.uploadUrl = uploadUrl;
 
@@ -297,7 +301,8 @@ export const getApiCreditBalance = async (): Promise<number> => {
 export const generatePersona = async (
   audioId: string,
   name: string,
-  description: string
+  description: string,
+  taskId?: string
 ): Promise<string> => {
   const { provider, apiKey, baseUrl } = await getApiConfig();
   
@@ -310,7 +315,8 @@ export const generatePersona = async (
     body: JSON.stringify({
       audioId,
       name,
-      description
+      description,
+      ...(taskId && { taskId })
     }),
   });
 
@@ -333,7 +339,8 @@ export const uploadAndCoverAudio = async (
   title: string,
   personaId: string,
   audioId?: string,
-  audioUrl?: string
+  audioUrl?: string,
+  isVoicePersona?: boolean
 ): Promise<string> => {
   const { provider, apiKey, baseUrl } = await getApiConfig();
   
@@ -344,11 +351,14 @@ export const uploadAndCoverAudio = async (
     customMode: true,
     instrumental: false,
     callBackUrl: "https://httpbin.org/post",
-    model: personaId ? 'V3_5' : 'V3_5'
+    model: personaId ? 'V5_5' : 'V4_5ALL'
   };
 
   if (personaId) {
     payload.personaId = personaId;
+    if (isVoicePersona) {
+      payload.personaModel = 'voice_persona';
+    }
   }
   
   if (audioId) payload.audioId = audioId;

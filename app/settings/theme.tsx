@@ -12,6 +12,7 @@ export default function ThemeSettingsScreen() {
 
   const themes: { id: ThemeType; name: string; icon: keyof typeof Ionicons.glyphMap; description: string }[] = [
     { id: 'luxury', name: 'Luxury Gold', icon: 'diamond', description: 'The classic Bongo Stream premium dark theme.' },
+    { id: 'spotify', name: 'Emerald Green', icon: 'musical-notes', description: 'The iconic green player look.' },
     { id: 'love', name: 'Love & Romance', icon: 'heart', description: 'Crimson red and hot pink vibes.' },
     { id: 'ocean', name: 'Deep Ocean', icon: 'water', description: 'Relaxing cyan and deep midnight blues.' },
     { id: 'cyberpunk', name: 'Neon Cyberpunk', icon: 'flash', description: 'Vibrant neon magenta and cyan.' },
