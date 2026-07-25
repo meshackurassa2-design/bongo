@@ -67,7 +67,7 @@ export const generateMusic = async (
 
   if (provider === 'kie') {
     payload.style = finalStyle;
-    payload.model = personaId ? 'V5_5' : 'V4_5ALL';
+    payload.model = personaId ? 'V5' : 'V4_5ALL';
     if (typeof weirdness === 'number') payload.weirdnessConstraint = weirdness;
     if (typeof styleInfluence === 'number') payload.styleWeight = styleInfluence;
   } else {
@@ -79,7 +79,6 @@ export const generateMusic = async (
 
   if (personaId) {
     payload.personaId = personaId;
-    if (provider === 'kie') payload.personaModel = 'voice_persona'; // Required for Kie AI V5_5
   }
   if (uploadUrl) payload.uploadUrl = uploadUrl;
 
@@ -345,12 +344,11 @@ export const uploadAndCoverAudio = async (
     customMode: true,
     instrumental: false,
     callBackUrl: "https://httpbin.org/post",
-    model: provider === 'kie' ? 'V5_5' : (personaId ? 'V5' : 'V3_5')
+    model: personaId ? 'V5' : 'V3_5'
   };
 
   if (personaId) {
     payload.personaId = personaId;
-    if (provider === 'kie') payload.personaModel = 'voice_persona'; // Required for Kie AI V5_5
   }
   
   if (audioId) payload.audioId = audioId;
