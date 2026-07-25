@@ -663,8 +663,8 @@ export default function PlayerScreen() {
           <View style={styles.vinylSpindle} />
         </Animated.View>
 
-        {/* Professional Tonearm (The Staff/Needle) */}
-        <Animated.View style={[styles.tonearmContainer, { transform: [{ rotate: armRotation }] }]} pointerEvents="none">
+        {/* Professional Tonearm (The Staff/Needle) — fixed position, only disk spins */}
+        <View style={[styles.tonearmContainer, { transform: [{ rotate: '18deg' }] }]} pointerEvents="none">
           {/* Base/Pivot */}
           <View style={styles.tonearmBase}>
             <LinearGradient colors={['#333', '#111']} style={StyleSheet.absoluteFillObject} />
@@ -679,7 +679,7 @@ export default function PlayerScreen() {
             <LinearGradient colors={['#2a2a2a', '#111']} style={StyleSheet.absoluteFillObject} />
             <View style={{ width: 2, height: 4, backgroundColor: 'red', position: 'absolute', bottom: -2, right: 4 }} />
           </View>
-        </Animated.View>
+        </View>
 
         {/* The Fly */}
         <Animated.View style={{ 
