@@ -186,9 +186,9 @@ function TaskItem({ task, isPublishing, setIsPublishing, isDownloading, setIsDow
           } else if (info.status === 'SENSITIVE_WORD_ERROR') {
              updateTask(task.taskId, 'SENSITIVE_WORD_ERROR');
           } else if (info.status?.includes('FAILED') || info.status?.includes('ERROR')) {
-             updateTask(task.taskId, 'FAILED');
+             updateTask(task.taskId, 'FAILED', undefined, info.status);
           } else if (info.status === 'SUCCESS' && !hasTracks) {
-             updateTask(task.taskId, 'FAILED');
+             updateTask(task.taskId, 'FAILED', undefined, 'SUCCESS but no audio returned');
           }
         } catch (e: any) {
           setPollError(e.message || "Network error");
@@ -476,7 +476,12 @@ function TaskItem({ task, isPublishing, setIsPublishing, isDownloading, setIsDow
       ) : task.status === 'FAILED' ? (
         <View style={styles.errorBanner}>
           <Ionicons name="warning" size={16} color={COLORS.error} />
-          <Text style={[styles.statusText, { color: COLORS.error, marginLeft: 8 }]}>Generation Failed.</Text>
+          <View style={{ flex: 1, marginLeft: 8 }}>
+            <Text style={[styles.statusText, { color: COLORS.error }]}>Generation Failed.</Text>
+            {(task as any).failReason ? (
+              <Text style={{ color: COLORS.error, fontSize: 11, opacity: 0.8, marginTop: 2 }}>{(task as any).failReason}</Text>
+            ) : null}
+          </View>
         </View>
       ) : Array.isArray(task.tracks) && task.tracks.length > 0 ? (
         task.tracks.map(track => (

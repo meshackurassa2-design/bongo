@@ -10,6 +10,7 @@ export interface AISongTask {
   createdAt: number;
   tracks?: SunoAudioData[];
   taskType?: 'GENERATE' | 'VOCAL_REMOVAL';
+  failReason?: string;
 }
 
 export interface Persona {
@@ -23,7 +24,7 @@ interface AIStore {
   tasks: AISongTask[];
   personas: Persona[];
   addTask: (taskId: string, title: string, taskType?: 'GENERATE' | 'VOCAL_REMOVAL') => void;
-  updateTask: (taskId: string, status: SunoTaskStatus, tracks?: SunoAudioData[]) => void;
+  updateTask: (taskId: string, status: SunoTaskStatus, tracks?: SunoAudioData[], failReason?: string) => void;
   updateTrack: (taskId: string, trackId: string, updates: Partial<SunoAudioData>) => void;
   removeTask: (taskId: string) => void;
   addPersona: (persona: Persona) => void;
@@ -38,8 +39,8 @@ export const useAIStore = create<AIStore>()(
       addTask: (taskId, title, taskType) => set((state) => ({
         tasks: [{ taskId, title, status: 'PENDING', createdAt: Date.now(), taskType: taskType || 'GENERATE' }, ...state.tasks]
       })),
-      updateTask: (taskId, status, tracks) => set((state) => ({
-        tasks: state.tasks.map(t => t.taskId === taskId ? { ...t, status, tracks: tracks || t.tracks } : t)
+      updateTask: (taskId, status, tracks, failReason) => set((state) => ({
+        tasks: state.tasks.map(t => t.taskId === taskId ? { ...t, status, tracks: tracks || t.tracks, failReason: failReason || t.failReason } : t)
       })),
       updateTrack: (taskId, trackId, updates) => set((state) => ({
         tasks: state.tasks.map(t => {
