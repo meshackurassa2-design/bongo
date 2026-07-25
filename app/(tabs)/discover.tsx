@@ -57,23 +57,28 @@ export default function DiscoverScreen() {
       const shuffled = (data || []).sort(() => 0.5 - Math.random());
       setFeedData(shuffled as Track[]);
 
-      // Fetch user's likes for these tracks
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const trackIds = shuffled.map(t => t.id);
-        const { data: likesData } = await supabase
-          .from('track_likes')
-          .select('track_id')
-          .eq('user_id', user.id)
-          .in('track_id', trackIds);
+      // Fetch user's likes for these tracks (silently fail if table doesn't exist yet)
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const trackIds = shuffled.map(t => t.id);
+          const { data: likesData } = await supabase
+            .from('track_likes')
+            .select('track_id')
+            .eq('user_id', user.id)
+            .in('track_id', trackIds);
 
-        if (likesData) {
-          const likesMap: Record<string, boolean> = {};
-          likesData.forEach(like => {
-            likesMap[like.track_id] = true;
-          });
-          setLikedTracks(likesMap);
+          if (likesData) {
+            const likesMap: Record<string, boolean> = {};
+            likesData.forEach(like => {
+              likesMap[like.track_id] = true;
+            });
+            setLikedTracks(likesMap);
+          }
         }
+      } catch (likesErr) {
+        // track_likes table may not exist yet — silently ignore
+        console.log('track_likes not ready yet:', likesErr);
       }
     } catch (e) {
       console.log(e);
@@ -227,12 +232,16 @@ export default function DiscoverScreen() {
           viewabilityConfig={viewabilityConfig}
           renderItem={({ item, index }) => (
             <View style={{ width, height: listHeight }}>
-              {/* Background Art (Artist Avatar or Track Cover) */}
-              <Image 
-                source={{ uri: (item as any).profile?.avatar_url || item.cover_url }} 
-                style={StyleSheet.absoluteFillObject} 
-                contentFit="cover"
-              />
+              {/* Background Art with fallback color if no image */}
+              {((item as any).profile?.avatar_url || item.cover_url) ? (
+                <Image 
+                  source={{ uri: (item as any).profile?.avatar_url || item.cover_url }} 
+                  style={StyleSheet.absoluteFillObject} 
+                  contentFit="cover"
+                />
+              ) : (
+                <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#1a1a2e' }]} />
+              )}
               
               {/* Overlay Gradient */}
               <LinearGradient
