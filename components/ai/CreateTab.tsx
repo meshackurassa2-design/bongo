@@ -124,7 +124,8 @@ export default function CreateTab({ onGenerateSuccess, openLyricsModal }: Create
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
+    <View style={{ flex: 1 }}>
+      <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
       {(profile?.credits || 0) <= 2 && (
         <TouchableOpacity style={styles.lowCreditBanner} onPress={() => router.push('/buy-credits')}>
           <LinearGradient colors={['#FF3B30', '#FF9500']} start={{x: 0, y: 0}} end={{x: 1, y: 0}} style={[StyleSheet.absoluteFill, { borderRadius: 16 }]} />
@@ -276,6 +277,31 @@ export default function CreateTab({ onGenerateSuccess, openLyricsModal }: Create
         <Text style={styles.buyCreditsInlineText}>Get More Credits</Text>
       </TouchableOpacity>
     </ScrollView>
+
+      {/* Fullscreen Lyrics Input Modal */}
+      <Modal visible={isLyricsFullscreen} animationType="slide" transparent>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(10,10,12,0.98)', paddingTop: 50 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, marginBottom: 16 }}>
+              <Text style={{ color: COLORS.textPrimary, fontSize: 18, fontWeight: '800' }}>Custom Lyrics</Text>
+              <TouchableOpacity onPress={() => setIsLyricsFullscreen(false)} style={{ padding: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 24 }}>
+                <Ionicons name="contract" size={24} color={COLORS.gold} />
+              </TouchableOpacity>
+            </View>
+            <TextInput 
+              style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', color: COLORS.textPrimary, padding: 24, fontSize: 16, textAlignVertical: 'top' }}
+              placeholder="Write your verses and chorus here..."
+              placeholderTextColor={COLORS.textTertiary}
+              value={lyrics}
+              onChangeText={(t) => { setLyrics(t); }}
+              multiline
+              autoFocus
+            />
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+    </View>
   );
 }
 

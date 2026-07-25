@@ -67,12 +67,12 @@ export const generateMusic = async (
 
   if (provider === 'kie') {
     payload.style = finalStyle;
-    payload.model = personaId ? 'V5' : 'V4_5ALL';
+    payload.model = personaId ? 'V3_5' : 'V4_5ALL';
     if (typeof weirdness === 'number') payload.weirdnessConstraint = weirdness;
     if (typeof styleInfluence === 'number') payload.styleWeight = styleInfluence;
   } else {
     payload.tags = finalStyle;
-    payload.model = personaId ? 'V5' : 'V4_5ALL';
+    payload.model = personaId ? 'V3_5' : 'V4_5ALL';
     if (typeof weirdness === 'number') payload.weirdness = weirdness;
     if (typeof styleInfluence === 'number') payload.style_influence = styleInfluence;
   }
@@ -344,7 +344,7 @@ export const uploadAndCoverAudio = async (
     customMode: true,
     instrumental: false,
     callBackUrl: "https://httpbin.org/post",
-    model: personaId ? 'V5' : 'V3_5'
+    model: personaId ? 'V3_5' : 'V3_5'
   };
 
   if (personaId) {
