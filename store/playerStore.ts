@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import TrackPlayer, { Event, State as TPState, AppKilledPlaybackBehavior, Capability, IOSCategory, IOSCategoryMode, IOSCategoryOptions } from 'react-native-track-player';
+import TrackPlayer, { Event, State as TPState, AppKilledPlaybackBehavior, Capability, IOSCategory, IOSCategoryMode, IOSCategoryOptions, PitchAlgorithm } from 'react-native-track-player';
 import { Track } from '../constants';
 import { useOfflineStore } from './offlineStore';
 import { useAuthStore } from './authStore';
@@ -199,6 +199,7 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
       artist: track.artist_name || 'Unknown Artist',
       artwork: track.cover_url || 'https://via.placeholder.com/150',
       duration: track.duration_sec,
+      pitchAlgorithm: PitchAlgorithm.Linear,
     };
 
     try {
