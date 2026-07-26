@@ -9,7 +9,9 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "splash": {
-      "backgroundColor": "#CC0000"
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0A0A0F"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -26,7 +28,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#CC0000"
+        "backgroundColor": "#0A0A0F"
       },
       "package": "com.bongostream.app",
       "permissions": [
