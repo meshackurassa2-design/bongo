@@ -61,8 +61,9 @@ export const useOfflineStore = create<OfflineStore>()(
             // due to loading massive Base64 audio strings into memory.
             // Since FileSystem.documentDirectory is already sandboxed by iOS/Android OS, 
             // the files are inherently protected from casual access.
-            const finalUri = `${FileSystem.documentDirectory}track_${track.id}.${ext}`;
-            await FileSystem.moveAsync({ from: result.uri, to: finalUri });
+            // The downloaded file is already at fileUri (result.uri).
+            // We just need to save it to state.
+            const finalUri = result.uri;
 
             set((state) => ({
               downloadedTracks: {
