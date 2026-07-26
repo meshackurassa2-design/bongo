@@ -42,15 +42,21 @@ export const useOfflineStore = create<OfflineStore>()(
           }
           const fileUri = `${FileSystem.documentDirectory}track_${track.id}.${ext}`;
           
+          let lastUpdate = 0;
           const downloadResumable = FileSystem.createDownloadResumable(
             track.audio_url,
             fileUri,
             {},
             (downloadProgress) => {
-              const progress = downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite;
-              set((state) => ({
-                downloadProgress: { ...state.downloadProgress, [track.id]: progress }
-              }));
+              const now = Date.now();
+              // Throttle UI updates to every 250ms to prevent massive JS thread lag on large files
+              if (now - lastUpdate > 250 || downloadProgress.totalBytesWritten === downloadProgress.totalBytesExpectedToWrite) {
+                lastUpdate = now;
+                const progress = downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite;
+                set((state) => ({
+                  downloadProgress: { ...state.downloadProgress, [track.id]: progress }
+                }));
+              }
             }
           );
 
