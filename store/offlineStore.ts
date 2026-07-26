@@ -112,11 +112,21 @@ export const useOfflineStore = create<OfflineStore>()(
         const track = get().downloadedTracks[trackId];
         if (!track || !track.localUri) return null;
 
-        // Since we removed JS-side encryption to prevent memory crashes, 
-        // the localUri is already a playable raw audio file.
-        // If the file happens to be an old encrypted .enc file, it will fail to play, 
-        // but new downloads will work perfectly.
-        return track.localUri;
+        // Fix iOS Path Bug: iOS changes the app's Document directory UUID randomly on reboots/updates.
+        // We must extract the filename and append it to the CURRENT documentDirectory.
+        const filename = track.localUri.split('/').pop();
+        const currentUri = FileSystem.documentDirectory + filename;
+
+        try {
+          const info = await FileSystem.getInfoAsync(currentUri);
+          if (info.exists && info.size > 0) {
+            return currentUri;
+          }
+        } catch (e) {
+          console.error("Failed to verify offline file", e);
+        }
+        
+        return null;
       },
     }),
     {

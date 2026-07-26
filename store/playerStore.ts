@@ -192,17 +192,22 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
         url = url.replace(/ /g, '%20');
     }
 
-    const tpTrack = {
+    const tpTrack: any = {
       id: track.id,
       url: url,
       title: track.title,
       artist: track.artist_name || 'Unknown Artist',
-      // If we are playing a downloaded file, omit the remote artwork URL.
-      // TrackPlayer can stall/fail indefinitely if it tries to fetch a remote image without internet.
-      artwork: decryptedUri ? undefined : (track.cover_url || 'https://via.placeholder.com/150'),
       duration: track.duration_sec,
       pitchAlgorithm: PitchAlgorithm.Linear,
     };
+
+    // If we are playing a downloaded file, omit the remote artwork URL entirely.
+    // Passing undefined or a remote URL without internet will crash the native bridge or stall playback.
+    if (!decryptedUri && track.cover_url) {
+      tpTrack.artwork = track.cover_url;
+    } else if (!decryptedUri) {
+      tpTrack.artwork = 'https://via.placeholder.com/150';
+    }
 
     try {
       await TrackPlayer.reset();
