@@ -304,7 +304,11 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     set({ hasCountedPlay: true });
     const track = get().currentTrack;
     if (track) {
-      supabase.rpc('increment_play_count', { track_id_input: track.id }).then();
+      const userId = useAuthStore.getState().session?.user?.id;
+      supabase.rpc('increment_play_count', { 
+        track_id_input: track.id,
+        user_id_input: userId || null
+      }).then();
     }
   },
 
