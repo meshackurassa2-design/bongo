@@ -73,7 +73,7 @@ export default function SearchScreen() {
           .limit(5),
         supabase
           .from('tracks')
-          .select('*, profile:profiles(*)')
+          .select('*, profile:profiles!tracks_user_id_fkey(*)')
           .ilike('title', `%${searchTerm}%`)
           .eq('is_public', true)
           .limit(15)

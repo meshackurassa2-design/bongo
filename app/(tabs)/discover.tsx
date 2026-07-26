@@ -47,7 +47,7 @@ export default function DiscoverScreen() {
         .from('tracks')
         .select(`
           *,
-          profile:profiles(*)
+          profile:profiles!tracks_user_id_fkey(*)
         `)
         .order('created_at', { ascending: false })
         .limit(20);
