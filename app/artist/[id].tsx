@@ -45,6 +45,19 @@ export default function ArtistScreen() {
     setLoading(false);
   };
 
+  useEffect(() => {
+    if (!id) return;
+    const channel = supabase.channel(`artist-tracks-${id}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tracks', filter: `user_id=eq.${id}` }, (payload) => {
+        setTracks(prev => prev.map(t => t.id === payload.new.id ? { ...t, play_count: payload.new.play_count } : t));
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id]);
+
   const toggleFollow = async () => {
     if (!session) {
       router.push('/auth');

@@ -201,12 +201,14 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
       pitchAlgorithm: PitchAlgorithm.Linear,
     };
 
-    // If we are playing a downloaded file, omit the remote artwork URL entirely.
-    // Passing undefined or a remote URL without internet will crash the native bridge or stall playback.
+    // If we are playing a downloaded file, omit the remote artwork URL entirely to prevent crashes.
+    // Instead, pass the local bundled app icon so the native Lock Screen controller still renders correctly!
     if (!decryptedUri && track.cover_url) {
       tpTrack.artwork = track.cover_url;
     } else if (!decryptedUri) {
       tpTrack.artwork = 'https://via.placeholder.com/150';
+    } else {
+      tpTrack.artwork = require('../assets/icon.png');
     }
 
     try {
