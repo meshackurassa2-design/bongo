@@ -71,10 +71,24 @@ export const useOfflineStore = create<OfflineStore>()(
             // We just need to save it to state.
             const finalUri = result.uri;
 
+            let localCoverUri: string | undefined = undefined;
+            if (track.cover_url) {
+              const coverExt = track.cover_url.split('.').pop()?.split('?')[0] || 'jpg';
+              const coverFileUri = `${FileSystem.documentDirectory}cover_${track.id}.${coverExt}`;
+              try {
+                const coverResult = await FileSystem.downloadAsync(track.cover_url, coverFileUri);
+                if (coverResult && coverResult.uri) {
+                  localCoverUri = coverResult.uri;
+                }
+              } catch(e) {
+                console.log('Failed to download cover art', e);
+              }
+            }
+
             set((state) => ({
               downloadedTracks: {
                 ...state.downloadedTracks,
-                [track.id]: { ...track, localUri: finalUri }
+                [track.id]: { ...track, localUri: finalUri, localCoverUri }
               }
             }));
           }
@@ -130,6 +144,25 @@ export const useOfflineStore = create<OfflineStore>()(
           }
         } catch (e) {
           console.error("Failed to verify offline file", e);
+        }
+        
+        return null;
+      },
+
+      getOfflineCoverUri: async (trackId) => {
+        const track = get().downloadedTracks[trackId];
+        if (!track || !track.localCoverUri) return null;
+
+        const filename = track.localCoverUri.split('/').pop();
+        const currentUri = FileSystem.documentDirectory + filename;
+
+        try {
+          const info = await FileSystem.getInfoAsync(currentUri);
+          if (info.exists && info.size > 0) {
+            return currentUri;
+          }
+        } catch (e) {
+          console.error("Failed to verify offline cover image", e);
         }
         
         return null;

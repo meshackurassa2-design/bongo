@@ -186,6 +186,7 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     }
 
     const decryptedUri = await useOfflineStore.getState().getDecryptedUri(track.id);
+    const offlineCoverUri = decryptedUri ? await useOfflineStore.getState().getOfflineCoverUri(track.id) : null;
     let url = decryptedUri || track.audio_url;
 
     if (url && typeof url === 'string') {
@@ -202,9 +203,11 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     };
 
     // If we are playing a downloaded file, omit the remote artwork URL entirely to prevent crashes.
-    // Instead, pass the local bundled app icon so the native Lock Screen controller still renders correctly!
+    // Instead, pass the downloaded local cover if available, or fallback to the bundled app icon!
     if (!decryptedUri && track.cover_url) {
       tpTrack.artwork = track.cover_url;
+    } else if (offlineCoverUri) {
+      tpTrack.artwork = 'file://' + offlineCoverUri.replace('file://', '');
     } else if (!decryptedUri) {
       tpTrack.artwork = 'https://via.placeholder.com/150';
     } else {
