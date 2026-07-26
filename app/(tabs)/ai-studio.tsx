@@ -105,19 +105,19 @@ export default function AIStudioScreen() {
       <View style={styles.content}>
         {activeTab === 'Create' && (
           <CreateTab 
-            onGenerateSuccess={() => router.back()} 
+            onGenerateSuccess={() => router.push('/library')} 
             openLyricsModal={openLyricsModal} 
           />
         )}
         {activeTab === 'Cover' && (
           <UploadCoverTab 
-            onGenerateSuccess={() => router.back()} 
+            onGenerateSuccess={() => router.push('/library')} 
             openLyricsModal={openLyricsModal}
           />
         )}
         {activeTab === 'Sounds' && (
           <SoundsTab 
-            onGenerateSuccess={() => router.back()} 
+            onGenerateSuccess={() => router.push('/library')} 
           />
         )}
         {activeTab === 'Personas' && (
