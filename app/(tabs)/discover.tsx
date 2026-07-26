@@ -1,423 +1,326 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, Dimensions, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Dimensions, FlatList } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { Audio } from 'expo-av';
+import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '../../lib/supabase';
 import { useThemeStore } from '../../store/themeStore';
-import { Track } from '../../constants';
+import { Track, GENRES } from '../../constants';
 import { usePlayerStore } from '../../store/playerStore';
-import * as Haptics from 'expo-haptics';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
-// Deducting approximate bottom tab bar height and top notch
-// We can use a slightly flexible approach using flex: 1 but FlatList items need exact height if pagingEnabled
-// Since standard Bottom Tab is ~50px and top status bar is ~40px, but flex: 1 is best.
-// Wait, for FlatList pagingEnabled on Android/iOS, if the FlatList itself is flex: 1, 
-// the items should be equal to the FlatList's layout height.
-// Let's use an onLayout to get exact height.
+const PILLS = ['All', 'Spotlight', 'Genres', 'Trending'];
 
 export default function DiscoverScreen() {
   const { COLORS } = useThemeStore();
   const styles = getStyles(COLORS);
   const router = useRouter();
   
-  const [feedData, setFeedData] = useState<Track[]>([]);
+  const [activePill, setActivePill] = useState('All');
   const [loading, setLoading] = useState(true);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [listHeight, setListHeight] = useState(height);
-  const [likedTracks, setLikedTracks] = useState<Record<string, boolean>>({});
-  
-  const soundRef = useRef<Audio.Sound | null>(null);
-  const loadingSoundRef = useRef<boolean>(false);
-  const [isPlayingSnippet, setIsPlayingSnippet] = useState(false);
+  const [spotlight, setSpotlight] = useState<Track[]>([]);
+  const [trending, setTrending] = useState<Track[]>([]);
+
+  const playTrack = usePlayerStore(s => s.playTrack);
+  const currentTrack = usePlayerStore(s => s.currentTrack);
 
   useEffect(() => {
-    loadDiscoverFeed();
+    loadDiscoverData();
   }, []);
 
-  const loadDiscoverFeed = async () => {
+  const loadDiscoverData = async () => {
     setLoading(true);
     try {
-      // Fetch random popular tracks to discover    try {
-      const { data, error } = await supabase
-        .from('tracks')
-        .select(`
-          *,
-          profile:profiles!tracks_user_id_fkey(*)
-        `)
-        .order('created_at', { ascending: false })
-        .limit(20);
-
-      if (error) throw error;
+      const [spotlightRes, trendingRes] = await Promise.all([
+        supabase
+          .from('tracks')
+          .select('*, profile:profiles!tracks_user_id_fkey(*)')
+          .eq('is_public', true)
+          .order('like_count', { ascending: false })
+          .limit(10),
+        supabase
+          .from('tracks')
+          .select('*, profile:profiles!tracks_user_id_fkey(*)')
+          .eq('is_public', true)
+          .order('play_count', { ascending: false })
+          .limit(15)
+      ]);
       
-      const shuffled = (data || []).sort(() => 0.5 - Math.random());
-      setFeedData(shuffled as Track[]);
-
-      // Fetch user's likes for these tracks (silently fail if table doesn't exist yet)
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const trackIds = shuffled.map(t => t.id);
-          const { data: likesData } = await supabase
-            .from('track_likes')
-            .select('track_id')
-            .eq('user_id', user.id)
-            .in('track_id', trackIds);
-
-          if (likesData) {
-            const likesMap: Record<string, boolean> = {};
-            likesData.forEach(like => {
-              likesMap[like.track_id] = true;
-            });
-            setLikedTracks(likesMap);
-          }
-        }
-      } catch (likesErr) {
-        // track_likes table may not exist yet — silently ignore
-        console.log('track_likes not ready yet:', likesErr);
-      }
+      if (spotlightRes.data) setSpotlight(spotlightRes.data as Track[]);
+      if (trendingRes.data) setTrending(trendingRes.data as Track[]);
     } catch (e) {
-      console.log(e);
+      console.log('Error loading discover:', e);
     } finally {
       setLoading(false);
     }
   };
 
-  const playSnippet = async (audioUrl: string) => {
-    if (loadingSoundRef.current) return; // Prevent race conditions
-    
-    await stopSnippet();
-    
-    try {
-      loadingSoundRef.current = true;
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: audioUrl },
-        { shouldPlay: true, isLooping: true }
-      );
-      soundRef.current = sound;
-      setIsPlayingSnippet(true);
-    } catch (e) {
-      console.log('Error playing snippet', e);
-    } finally {
-      loadingSoundRef.current = false;
-    }
-  };
-
-  const stopSnippet = async () => {
-    if (soundRef.current) {
-      const sound = soundRef.current;
-      soundRef.current = null;
-      setIsPlayingSnippet(false);
-      try {
-        const status = await sound.getStatusAsync();
-        if (status.isLoaded) {
-          await sound.stopAsync();
-          await sound.unloadAsync();
-        }
-      } catch (e) {
-        console.log('Error stopping snippet', e);
-      }
-    }
-  };
-
-  const toggleLike = async (track: Track, index: number) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
-    const isLiked = likedTracks[track.id] || false;
-    
-    // Optimistic UI update
-    setLikedTracks(prev => ({ ...prev, [track.id]: !isLiked }));
-    setFeedData(prev => {
-      const newData = [...prev];
-      newData[index] = {
-        ...newData[index],
-        like_count: isLiked ? Math.max(0, newData[index].like_count - 1) : newData[index].like_count + 1
-      };
-      return newData;
-    });
-
-    try {
-      const { error } = await supabase.rpc('toggle_track_like', { p_track_id: track.id });
-      if (error) {
-        console.error('Error toggling like:', error);
-        // Revert UI update on error
-        setLikedTracks(prev => ({ ...prev, [track.id]: isLiked }));
-        setFeedData(prev => {
-          const newData = [...prev];
-          newData[index] = {
-            ...newData[index],
-            like_count: track.like_count // original
-          };
-          return newData;
-        });
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  // Handle playing audio based on visible item
-  useEffect(() => {
-    if (feedData.length > 0 && activeIndex >= 0 && activeIndex < feedData.length) {
-      playSnippet(feedData[activeIndex].audio_url);
-    }
-    return () => {
-      stopSnippet();
-    };
-  }, [activeIndex, feedData]);
-
-  // Handle pause when leaving tab
-  useFocusEffect(
-    useCallback(() => {
-      // Screen focused
-      if (soundRef.current && !isPlayingSnippet) {
-        soundRef.current.playAsync();
-        setIsPlayingSnippet(true);
-      }
-      return () => {
-        // Screen blurred
-        if (soundRef.current) {
-          soundRef.current.pauseAsync().catch(() => {});
-          setIsPlayingSnippet(false);
-        }
-        // Also kill global player
-        usePlayerStore.getState().pause();
-      };
-    }, [])
+  const renderSectionHeader = (title: string, onShowAll?: () => void) => (
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      {onShowAll && (
+        <TouchableOpacity style={styles.viewAllBtn} onPress={onShowAll}>
+          <Text style={styles.viewAllText}>View all</Text>
+          <Ionicons name="chevron-forward" size={14} color={COLORS.textSecondary} />
+        </TouchableOpacity>
+      )}
+    </View>
   );
-
-  const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
-    if (viewableItems.length > 0) {
-      setActiveIndex(viewableItems[0].index);
-    }
-  }).current;
-
-  const viewabilityConfig = useRef({
-    itemVisiblePercentThreshold: 60,
-  }).current;
-
-  if (loading) {
-    return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={COLORS.gold} />
-        <Text style={{ color: COLORS.textSecondary, marginTop: 16 }}>Finding Artists...</Text>
-      </View>
-    );
-  }
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.searchBtn} onPress={() => router.push('/search')}>
-          <Ionicons name="search" size={28} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Discover</Text>
-        <View style={{ width: 44 }} />
-      </View>
-      
-      <View 
-        style={{ flex: 1 }} 
-        onLayout={(e) => setListHeight(e.nativeEvent.layout.height)}
-      >
-        <FlatList
-          data={feedData}
-          keyExtractor={(item) => item.id}
-          pagingEnabled
-          showsVerticalScrollIndicator={false}
-          onViewableItemsChanged={onViewableItemsChanged}
-          viewabilityConfig={viewabilityConfig}
-          renderItem={({ item, index }) => (
-            <View style={{ width, height: listHeight }}>
-              {/* Background Art with fallback color if no image */}
-              {((item as any).profile?.avatar_url || item.cover_url) ? (
-                <Image 
-                  source={{ uri: (item as any).profile?.avatar_url || item.cover_url }} 
-                  style={StyleSheet.absoluteFillObject} 
-                  contentFit="cover"
-                />
-              ) : (
-                <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#1a1a2e' }]} />
-              )}
-              
-              {/* Overlay Gradient */}
-              <LinearGradient
-                colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.95)']}
-                style={StyleSheet.absoluteFillObject}
-              />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+        
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Discover</Text>
+          <TouchableOpacity onPress={() => router.push('/search')} style={styles.searchIcon}>
+            <Ionicons name="search" size={24} color={COLORS.textPrimary} />
+          </TouchableOpacity>
+        </View>
 
-              {/* Top gradient for back button visibility if needed */}
-              <LinearGradient
-                colors={['rgba(0,0,0,0.6)', 'transparent']}
-                style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 100 }}
-              />
+        {/* Pills */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillsContainer}>
+          {PILLS.map((pill) => (
+            <TouchableOpacity 
+              key={pill} 
+              style={[styles.pill, activePill === pill && styles.pillActive]}
+              onPress={() => setActivePill(pill)}
+            >
+              <Text style={[styles.pillText, activePill === pill && styles.pillTextActive]}>{pill}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
-              {/* Content Box at Bottom */}
-              <View style={styles.contentBox}>
-                <View style={styles.artistInfo}>
-                  <Text style={styles.artistName}>{(item as any).profile?.display_name || item.artist_name}</Text>
-                  <Text style={styles.trackTitle}>♫ {item.title}</Text>
-                  
-                  {/* Genre / Tags */}
-                  <View style={styles.tagWrap}>
-                    <View style={styles.tag}>
-                      <Text style={styles.tagText}>{item.genre}</Text>
-                    </View>
-                    <View style={styles.tag}>
-                      <Text style={styles.tagText}>Top Track</Text>
-                    </View>
-                  </View>
-                </View>
-
-                {/* Right Side Actions */}
-                <View style={styles.actionsBox}>
-                  <TouchableOpacity style={styles.actionBtn} onPress={() => {
-                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                    // Add Follow logic here
-                  }}>
-                    <View style={styles.avatarWrap}>
-                      <Image source={{ uri: (item as any).profile?.avatar_url || item.cover_url }} style={styles.smallAvatar} />
-                      <View style={styles.followBadge}>
-                        <Ionicons name="add" size={14} color="#000" />
+        {loading ? (
+          <ActivityIndicator size="large" color={COLORS.gold} style={{ marginTop: 40 }} />
+        ) : (
+          <>
+            {/* Spotlight Section */}
+            {(activePill === 'All' || activePill === 'Spotlight') && spotlight.length > 0 && (
+              <View style={styles.section}>
+                {renderSectionHeader('Spotlight', () => {})}
+                <FlatList
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ paddingHorizontal: 16, gap: 16 }}
+                  data={spotlight}
+                  keyExtractor={(item) => item.id}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity style={styles.spotlightCard} onPress={() => playTrack(item, spotlight)}>
+                      <Image source={{ uri: item.cover_url || undefined }} style={styles.spotlightImage} />
+                      <LinearGradient
+                        colors={['transparent', 'rgba(0,0,0,0.8)']}
+                        style={styles.spotlightGradient}
+                      />
+                      <View style={styles.spotlightContent}>
+                        <Text style={styles.spotlightTitle} numberOfLines={1}>{item.title}</Text>
+                        <Text style={styles.spotlightArtist} numberOfLines={1}>{item.artist_name}</Text>
                       </View>
-                    </View>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity style={styles.actionBtn} onPress={() => toggleLike(item, index)}>
-                    <Ionicons 
-                      name={likedTracks[item.id] ? "heart" : "heart-outline"} 
-                      size={32} 
-                      color={likedTracks[item.id] ? COLORS.gold : COLORS.textPrimary} 
-                    />
-                    <Text style={styles.actionText}>{item.like_count > 1000 ? `${(item.like_count/1000).toFixed(1)}k` : item.like_count}</Text>
-                  </TouchableOpacity>
-                </View>
+                    </TouchableOpacity>
+                  )}
+                />
               </View>
-            </View>
-          )}
-        />
-      </View>
+            )}
+
+            {/* Genres Section */}
+            {(activePill === 'All' || activePill === 'Genres') && (
+              <View style={styles.section}>
+                {renderSectionHeader('Genres', () => {})}
+                <FlatList
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}
+                  data={GENRES}
+                  keyExtractor={(item) => item.name}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity 
+                      style={[styles.genreCard, { backgroundColor: item.color }]}
+                      onPress={() => router.push({ pathname: '/genre/[name]', params: { name: item.name } })}
+                    >
+                      <Text style={styles.genreCardTitle}>{item.name}</Text>
+                      <Ionicons name={item.icon as any} size={40} color="rgba(255,255,255,0.2)" style={styles.genreCardIcon} />
+                    </TouchableOpacity>
+                  )}
+                />
+              </View>
+            )}
+
+            {/* Trending Section */}
+            {(activePill === 'All' || activePill === 'Trending') && trending.length > 0 && (
+              <View style={styles.section}>
+                {renderSectionHeader('Trending', () => {})}
+                <FlatList
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ paddingHorizontal: 16, gap: 16 }}
+                  data={trending}
+                  keyExtractor={(item) => item.id}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity style={styles.trendingCard} onPress={() => playTrack(item, trending)}>
+                      <Image source={{ uri: item.cover_url || undefined }} style={styles.trendingImage} />
+                      <Text style={styles.trendingTitle} numberOfLines={1}>{item.title}</Text>
+                      <Text style={styles.trendingArtist} numberOfLines={1}>{item.artist_name}</Text>
+                    </TouchableOpacity>
+                  )}
+                />
+              </View>
+            )}
+          </>
+        )}
+      </ScrollView>
     </View>
   );
 }
 
 const getStyles = (COLORS: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.black },
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.black,
+  },
   header: {
-    position: 'absolute',
-    top: 50,
-    left: 0,
-    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    zIndex: 10,
-  },
-  searchBtn: {
-    padding: 8,
-    width: 44,
+    paddingTop: 60,
+    paddingBottom: 10,
   },
   headerTitle: {
     color: '#fff',
-    fontSize: 20,
+    fontSize: 32,
     fontWeight: '800',
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
   },
-  contentBox: {
+  searchIcon: {
+    padding: 8,
+  },
+  pillsContainer: {
+    paddingHorizontal: 16,
+    gap: 12,
+    paddingBottom: 20,
+  },
+  pill: {
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.divider,
+  },
+  pillActive: {
+    borderColor: '#E91E63', // Neon pink for active tab as seen in screenshot
+    backgroundColor: 'rgba(233, 30, 99, 0.1)',
+  },
+  pillText: {
+    color: COLORS.textSecondary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  pillTextActive: {
+    color: '#fff',
+  },
+  section: {
+    marginBottom: 32,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  viewAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  viewAllText: {
+    color: COLORS.textSecondary,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  spotlightCard: {
+    width: width * 0.45,
+    height: width * 0.75,
+    borderRadius: 16,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: COLORS.card,
+  },
+  spotlightImage: {
+    width: '100%',
+    height: '100%',
+  },
+  spotlightGradient: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingBottom: 24, // accommodate tab bar if needed, but flex: 1 on FlatList container handles it
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
+    height: '50%',
   },
-  artistInfo: {
-    flex: 1,
-    paddingRight: 20,
-    paddingBottom: 10,
+  spotlightContent: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 12,
   },
-  artistName: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: '800',
-    marginBottom: 8,
-    textShadowColor: 'rgba(0,0,0,0.7)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-  },
-  trackTitle: {
+  spotlightTitle: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 12,
-  },
-  tagWrap: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  tag: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  tagText: {
-    color: '#fff',
-    fontSize: 12,
     fontWeight: '700',
-  },
-  actionsBox: {
-    alignItems: 'center',
-    gap: 24,
-    paddingBottom: 10,
-  },
-  actionBtn: {
-    alignItems: 'center',
-  },
-  avatarWrap: {
-    position: 'relative',
-    marginBottom: 8,
-  },
-  smallAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 2,
-    borderColor: '#fff',
-  },
-  followBadge: {
-    position: 'absolute',
-    bottom: -6,
-    alignSelf: 'center',
-    backgroundColor: COLORS.gold,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  playFullBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: COLORS.gold,
-    justifyContent: 'center',
-    alignItems: 'center',
     marginBottom: 4,
   },
-  actionText: {
+  spotlightArtist: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+  },
+  genreCard: {
+    width: width * 0.4,
+    height: 90,
+    borderRadius: 8,
+    padding: 12,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  genreCardTitle: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 18,
+    fontWeight: '700',
+    zIndex: 2,
+    width: '80%',
+  },
+  genreCardIcon: {
+    position: 'absolute',
+    bottom: -5,
+    right: -10,
+    zIndex: 1,
+  },
+  trendingCard: {
+    width: 140,
+  },
+  trendingImage: {
+    width: 140,
+    height: 140,
+    borderRadius: 12,
+    marginBottom: 8,
+    backgroundColor: COLORS.card,
+  },
+  trendingTitle: {
+    color: '#fff',
+    fontSize: 14,
     fontWeight: '600',
-    marginTop: 4,
-  }
+    marginBottom: 2,
+  },
+  trendingArtist: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+  },
 });

@@ -1,0 +1,71 @@
+export const Event = {
+  PlaybackState: 'playback-state',
+  PlaybackError: 'playback-error',
+  PlaybackQueueEnded: 'playback-queue-ended',
+  PlaybackTrackChanged: 'playback-track-changed',
+  PlaybackActiveTrackChanged: 'playback-active-track-changed',
+  PlaybackProgressUpdated: 'playback-progress-updated',
+  RemotePlay: 'remote-play',
+  RemotePause: 'remote-pause',
+  RemoteStop: 'remote-stop',
+  RemoteSkip: 'remote-skip',
+  RemoteNext: 'remote-next',
+  RemotePrevious: 'remote-previous',
+  RemoteSeek: 'remote-seek',
+  RemoteDuck: 'remote-duck',
+  RemoteJumpForward: 'remote-jump-forward',
+  RemoteJumpBackward: 'remote-jump-backward',
+  PlaybackPlayWhenReadyChanged: 'playback-play-when-ready-changed',
+};
+export const State = {
+  None: 'none',
+  Ready: 'ready',
+  Playing: 'playing',
+  Paused: 'paused',
+  Stopped: 'stopped',
+  Buffering: 'buffering',
+  Loading: 'loading',
+  Error: 'error',
+};
+export const AppKilledPlaybackBehavior = {
+  ContinuePlayback: 'continue-playback',
+  PausePlayback: 'pause-playback',
+  StopPlaybackAndRemoveNotification: 'stop-playback-and-remove-notification',
+};
+export const Capability = {
+  Play: 0,
+  PlayFromId: 1,
+  PlayFromSearch: 2,
+  Pause: 3,
+  Stop: 4,
+  SeekTo: 5,
+  Skip: 6,
+  SkipToNext: 7,
+  SkipToPrevious: 8,
+  JumpForward: 9,
+  JumpBackward: 10,
+  SetRating: 11,
+  Like: 12,
+  Dislike: 13,
+  Bookmark: 14,
+};
+export const IOSCategory = { Playback: 'playback', Ambient: 'ambient', SoloAmbient: 'soloAmbient' };
+export const IOSCategoryMode = { Default: 'default' };
+export const IOSCategoryOptions = { MixWithOthers: 'mixWithOthers', DuckOthers: 'duckOthers', AllowBluetooth: 'allowBluetooth', AllowBluetoothA2DP: 'allowBluetoothA2DP' };
+export default {
+  setupPlayer: async () => {},
+  updateOptions: async () => {},
+  reset: async () => {},
+  add: async () => {},
+  play: async () => {},
+  pause: async () => {},
+  skipToNext: async () => {},
+  skipToPrevious: async () => {},
+  seekTo: async () => {},
+  setRate: async () => {},
+  setVolume: async () => {},
+  getProgress: async () => ({ position: 0, duration: 0, buffered: 0 }),
+  getPlaybackState: async () => ({ state: State.None }),
+  addEventListener: () => ({ remove: () => {} }),
+  registerPlaybackService: () => {},
+};
