@@ -16,6 +16,7 @@ export default function AuthScreen() {
   const signIn = useAuthStore(s => s.signIn);
   const signUp = useAuthStore(s => s.signUp);
   const isLoading = useAuthStore(s => s.isLoading);
+  const enableOfflineMode = useAuthStore(s => s.enableOfflineMode);
 
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
@@ -174,6 +175,12 @@ export default function AuthScreen() {
             : <Text style={styles.submitText}>{mode === 'login' ? 'Ingia' : 'Jisajili'}</Text>
           }
         </TouchableOpacity>
+
+        {/* Offline Mode Bypass */}
+        <TouchableOpacity style={styles.offlineBtn} onPress={() => enableOfflineMode()} disabled={isLoading}>
+          <Ionicons name="cloud-offline" size={20} color={COLORS.textSecondary} />
+          <Text style={styles.offlineText}>Endelea Nje ya Mtandao (Offline)</Text>
+        </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -226,6 +233,8 @@ const getStyles = (COLORS: any) => StyleSheet.create({
   termsLink: { color: COLORS.gold, fontSize: 13, textDecorationLine: 'underline' },
   submitBtn: { backgroundColor: COLORS.gold, borderRadius: 12, padding: 16, alignItems: 'center', marginTop: 16 },
   submitText: { color: COLORS.black, fontWeight: '900', fontSize: 16 },
+  offlineBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16, marginTop: 4 },
+  offlineText: { color: COLORS.textSecondary, fontSize: 14, fontWeight: '600' },
   skipBtn: { alignItems: 'center', paddingVertical: 12 },
   skipText: { color: COLORS.textTertiary, fontSize: 13 },
 });

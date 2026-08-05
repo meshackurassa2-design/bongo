@@ -8,54 +8,69 @@ type AuthStore = {
   session: Session | null;
   profile: Profile | null;
   isLoading: boolean;
+  isOfflineMode: boolean;
   // Actions
   init: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<string | null>;
   signUp: (email: string, password: string, username: string, displayName: string, role: string) => Promise<string | null>;
   signOut: () => Promise<void>;
   fetchProfile: (userId?: string) => Promise<void>;
+  enableOfflineMode: () => void;
 };
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
   session: null,
   profile: null,
   isLoading: true,
+  isOfflineMode: false,
 
   init: async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    set({ session, isLoading: false });
-    
-    let currentChannel: any = null;
-
-    if (session?.user) {
-      get().fetchProfile(session.user.id);
-      
-      // Subscribe to real-time profile updates
-      currentChannel = supabase.channel(`profile_updates_${session.user.id}_${Date.now()}`)
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${session.user.id}` }, (payload) => {
-          set({ profile: payload.new as Profile });
-        })
-        .subscribe();
-    }
-    
-    supabase.auth.onAuthStateChange((_event, session) => {
-      set({ session });
-      if (currentChannel) {
-        supabase.removeChannel(currentChannel);
-        currentChannel = null;
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) {
+        console.log('Session error:', error);
       }
+      set({ session, isLoading: false });
       
+      let currentChannel: any = null;
+
       if (session?.user) {
         get().fetchProfile(session.user.id);
+        
+        // Subscribe to real-time profile updates
         currentChannel = supabase.channel(`profile_updates_${session.user.id}_${Date.now()}`)
           .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${session.user.id}` }, (payload) => {
             set({ profile: payload.new as Profile });
           })
           .subscribe();
-      } else {
-        set({ profile: null });
       }
-    });
+      
+      supabase.auth.onAuthStateChange((_event, session) => {
+        set({ session, isOfflineMode: false });
+        if (currentChannel) {
+          supabase.removeChannel(currentChannel);
+          currentChannel = null;
+        }
+        
+        if (session?.user) {
+          get().fetchProfile(session.user.id);
+          currentChannel = supabase.channel(`profile_updates_${session.user.id}_${Date.now()}`)
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${session.user.id}` }, (payload) => {
+              set({ profile: payload.new as Profile });
+            })
+            .subscribe();
+        } else {
+          set({ profile: null });
+        }
+      });
+    } catch (e) {
+      console.log('Error initializing auth:', e);
+      set({ isLoading: false });
+    }
+  },
+
+  enableOfflineMode: () => {
+    set({ isOfflineMode: true });
   },
 
   signIn: async (email, password) => {

@@ -36,7 +36,7 @@ const customTheme = {
 };
 
 export default function RootLayout() {
-  const { init, session, isLoading } = useAuthStore();
+  const { init, session, isLoading, isOfflineMode } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
 
@@ -57,12 +57,12 @@ export default function RootLayout() {
     if (isLoading) return;
     const inAuthGroup = segments[0] === 'auth';
     
-    if (!session && !inAuthGroup) {
+    if (!session && !inAuthGroup && !isOfflineMode) {
       router.replace('/auth');
-    } else if (session && inAuthGroup) {
+    } else if ((session || isOfflineMode) && inAuthGroup) {
       router.replace('/');
     }
-  }, [session, isLoading, segments]);
+  }, [session, isLoading, segments, isOfflineMode]);
 
   // We no longer return null here, we let the app mount behind the splash screen
   // if (isLoading) return null;
